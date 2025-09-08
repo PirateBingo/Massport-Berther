@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<!-- Port Dimensions: 3650 ft x 300 ft -->
+<svg id="port" width="4050" height="1100" viewBox="0 0 4050 1100"
+xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <path id="port" d="
+  M 0 400
+  l 0 300
+  l 3625 0
+  a 25 25 0 0 0 25 -25
+  l 0 -250
+  a 25 25 0 0 0 -25 -25
+  l 0 0
+  z" fill="#8b8b94" stroke="black" stroke-width="1"/>
+</svg>
