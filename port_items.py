@@ -10,7 +10,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtSvgWidgets import *
 
-import graphics_pane
+# import graphics_pane
 
 PEN = Qt.PenStyle.SolidLine
 STYLE = Qt.BrushStyle.Dense2Pattern
@@ -73,6 +73,12 @@ class Side(Enum):
     starboard = 1 # Right side
     both = 2
 
+DOOR_ATTR = {"Side": Side,
+             "Bow Distance": float,
+             "Stern Distance": float,
+             "Width": float,
+             "Height": float,
+             "Height Above Waterline": float}
 class Door(QGraphicsRectItem):
     def __init__(self, name: str, side: Side, bow_distance: float,
                  stern_distance: float, width: float, height: float,
@@ -100,6 +106,11 @@ class Door(QGraphicsRectItem):
             raise ValueError("Cannot compare Ship to non-Ship type")
         return self.__dict__() == door.__dict__()
 
+SHIP_ATTR = {"Length": float,
+             "Pattern": Qt.BrushStyle,
+             "Color": Qt.GlobalColor,
+             "Width": np.array(Door)}
+
 class Ship(PortItem):
     @typing.overload
     def __init__(self, name: str, length: float,
@@ -115,7 +126,7 @@ class Ship(PortItem):
     def __init__(self, ship: dict | str):
         # Load json data
         super().__init__()
-        if(type(ship) == str):
+        if type(ship) is str:
             self.name = os.path.splitext(os.path.basename(ship))[0]
             self.doors = []
             if os.path.splitext(ship)[1] != ".json":
