@@ -1,4 +1,5 @@
 import sys
+import os
 
 from PySide6.QtCore import *
 from PySide6.QtGui import *
@@ -10,6 +11,9 @@ import graphics_pane
 import time_pane
 
 PROGRAM_NAME = "Flynn Cruiseport Planner"
+
+get_icon = lambda s: os.path.join(os.getcwd(), "icons", f"{s}.png")
+LOGO = get_icon("logo")
 
 #FIXME: Redundant
 PALLETTE_MASSPORT = QPalette()
@@ -24,8 +28,8 @@ class Window(QSplitter):
                          orientation=Qt.Orientation.Vertical)
 
         # Set icon and window title
-        # icon = QIcon(ICON) #FIXME: Create Logo
-        # self.setWindowIcon(ICON)
+        logo = QIcon(LOGO)
+        self.setWindowIcon(logo)
         self.setWindowTitle(PROGRAM_NAME)
 
         # Exit QAction

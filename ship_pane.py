@@ -1,11 +1,17 @@
 import os
 import json
+import numpy as np
 
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
 import port_items
+from main import get_icon
+
+ADD_ICON = get_icon("add")
+ASTERISK_ICON = get_icon("asterisk")
+INVALID_ICON = get_icon("invalid")
 
 SHIP_DIR = os.path.join(os.getcwd(), "ships")
 ship_path = lambda s = str: os.path.join(SHIP_DIR, s)
@@ -19,52 +25,116 @@ class ShipPane(QFrame):
         def __init__(self, parent: QObject=None):
             super().__init__(parent, wordWrap=True, expandsOnDoubleClick=True,
                              uniformRowHeights=True)
-            self.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-            
+            self.setModel(ShipModel(self))
+            self.clicked.connect(self.model().item_press)
         #TODO: Enforce equal column widths
 
-class ShipItem(port_items.Ship, QStandardItem):
-    def __init__(self, path):
-        port_items.Ship.__init__(self, ship_path(path))
+# class ShipItem(QStandardItem, port_items.Ship):
+#     def __init__(self, path: str | None = None):
+#         port_items.Ship.__init__(self, ship_path(path) if type(path) is str else None)
 
+#         # Initialize root element for name
+#         name_item = QStandardItem(self.__dict__()["name"])
+#         name_item.setEditable(False)
+#         name_item.setDragEnabled(True)
+#         name_item.setDropEnabled(True)
+#         QStandardItem.__init__(self, name_item)
+
+#         # Add ship items
+#         def add_item(key, value):
+#             key_item = QStandardItem(key)
+#             key_item.setEditable = False
+#             self.appendRow([key_item, QStandardItem(str(value))])
+#         for key in self.__dict__().keys():
+#             if type(self.__dict__()[key]) != list:
+#                 if key != "name":
+#                     add_item(key, self.__dict__()[key])
+
+#             # Add ship's doors and their properties
+#             else:
+#                 for door in self.__dict__()[key]:
+#                     door_item = QStandardItem(door.__dict__()["name"])
+#                     door_item.setEditable(False)
+#                     self.appendRow(door_item)
+#                     for door_key in door.__dict__():
+#                         if door_key != "name":
+#                             door_attr = QStandardItem(door_key)
+#                             door_attr.setEditable(True)
+#                             door_item.appendRow([
+#                             door_attr, 
+#                             QStandardItem(str(door.__dict__()[door_key]))])
+#         self.isValid = True
+class SpawnShipButton(QStandardItem):
+    def __init__(self):
+        super().__init__("Add ship")
+        icon = QIcon(ADD_ICON)
+        self.setIcon(icon)
+class SpawnDoorButton(QStandardItem):
+    def __init__(self):
+        super().__init__("Add door")
+        icon = QIcon(INVALID_ICON)
+        self.setIcon(icon)
+
+class ShipItem(QStandardItem):
+    def __init__(self, ship: port_items.Ship = None):
         # Initialize root element for name
-        name_item = QStandardItem(self.__dict__()["name"])
-        name_item.setEditable(False)
-        name_item.setDragEnabled(True)
-        name_item.setDropEnabled(True)
-        QStandardItem.__init__(self, name_item)
+        super().__init__('')
+        self.setFlags(Qt.ItemFlag.ItemIsEditable |
+                      Qt.ItemFlag.ItemIsDragEnabled | 
+                      Qt.ItemFlag.ItemIsDropEnabled)
 
         # Add ship items
         def add_item(key, value):
             key_item = QStandardItem(key)
             key_item.setEditable = False
             self.appendRow([key_item, QStandardItem(str(value))])
-        for key in self.__dict__().keys():
-            if type(self.__dict__()[key]) != list:
-                if key != "name":
-                    add_item(key, self.__dict__()[key])
+        for key in port_items.SHIP_ATTR.keys():
+            add_item(key, '')
 
-            # Add ship's doors and their properties
-            else:
-                for door in self.__dict__()[key]:
-                    door_item = QStandardItem(door.__dict__()["name"])
-                    door_item.setEditable(False)
-                    self.appendRow(door_item)
-                    for door_key in door.__dict__():
-                        if door_key != "name":
-                            door_attr = QStandardItem(door_key)
-                            door_attr.setEditable(True)
-                            door_item.appendRow([
-                            door_attr, QStandardItem(str(door.__dict__()[door_key]))])
+        # Add door spawning button
+        self._door_button = SpawnDoorButton()
+        self.appendRow(self._door_button)
+
+    def add_door(self):
+        self.removeRow(self._door_button.row())
+
+        door = QStandardItem('')
+        self.appendRow(door)
+        
+        # Add door items
+        def add_item(key, value):
+            key_item = QStandardItem(key)
+            key_item.setEditable = False
+            door.appendRow([key_item, QStandardItem(str(value))])
+        for key in port_items.DOOR_ATTR.keys():
+            add_item(key, '')
+
+        self._door_button = SpawnDoorButton()
+        self.appendRow(self._door_button)
+
+        #     # Add ship's doors and their properties
+        #     else:
+        #         for door in self.__dict__()[key]:
+        #             door_item = QStandardItem(door.__dict__()["name"])
+        #             door_item.setEditable(False)
+        #             self.appendRow(door_item)
+        #             for door_key in door.__dict__():
+        #                 if door_key != "name":
+        #                     door_attr = QStandardItem(door_key)
+        #                     door_attr.setEditable(True)
+        #                     door_item.appendRow([
+        #                     door_attr, 
+        #                     QStandardItem(str(door.__dict__()[door_key]))])
+        # self.isValid = True
 
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
         super().__init__(0, 2, parent)
         self.setHorizontalHeaderLabels(['','']) # Empty headers
-        self.setItem
-        self.ship_arr = []
         self._read_ships()
-        self.itemChanged.connect(lambda a = QStandardItem: print(a.index()))
+        self._ship_button = SpawnShipButton()
+        self.setItem(0, self._ship_button)
+        # self.itemChanged.connect(lambda a = QStandardItem: print(a.index())) #TODO: implement function
 
     def _read_ships(self):
         for path in os.listdir(SHIP_DIR):
@@ -91,4 +161,19 @@ class ShipModel(QStandardItemModel):
             pass
 
         # Write file
-        with open(path, "w+") as json_file: self._json = json.load(json_file)
+        with open(path, "w+") as json_file: self._json = json.load(json_file)   
+
+    def _add_ship(self, button: SpawnShipButton):
+        self.removeRow(button.row())
+        self.appendRow(ShipItem())
+        self.appendRow(SpawnShipButton())
+
+    def _add_door(self, button: SpawnDoorButton):
+        pass
+
+    def item_press(self, index: QModelIndex):
+        button = self.itemFromIndex(index)
+        if button.__class__ == SpawnShipButton:
+            self._add_ship(button)
+        elif button.__class__ == SpawnDoorButton:
+            print(button.parent().add_door())
