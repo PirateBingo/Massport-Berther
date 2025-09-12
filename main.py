@@ -41,8 +41,8 @@ class Window(QSplitter):
         self._time_pane = time_pane.TimePane(self)
         self._ship_pane = ship_pane.ShipPane(self)
         self._graphics_pane = graphics_pane.GraphicsPane(self)
-        self.addWidget(self._time_pane)
         self.addWidget(self._ship_pane)
+        self.addWidget(self._time_pane)
         self.addWidget(self._graphics_pane)
 
         #FIXME: Probably inefficient
