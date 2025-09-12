@@ -239,16 +239,6 @@ class Ship(PortItem):
         self.show()
 
     def paint(self, painter: QPainter, option, widget):
-        # Pen
-        pen = QPen()
-        pen.setStyle(PEN)
-        painter.setPen(pen)
-
-        # Brush
-        brush = QBrush()
-        brush.setColor(COLOR)
-        brush.setStyle(STYLE)
-        painter.setBrush(brush)
-
-        # Draw shape
+        painter.setPen(QPen(PEN))
+        painter.setBrush(QBrush(COLOR, STYLE))
         painter.drawRect(self.rect())
