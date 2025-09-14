@@ -1,5 +1,6 @@
 import os
 import json
+import random
 import numpy as np
 
 from PySide6.QtCore import *
@@ -29,53 +30,6 @@ class ShipPane(QFrame):
             self.clicked.connect(self.model().item_press)
         #TODO: Enforce equal column widths
 
-# class ShipItem(QStandardItem, port_items.Ship):
-#     def __init__(self, path: str | None = None):
-#         port_items.Ship.__init__(self, ship_path(path) if type(path) is str else None)
-
-#         # Initialize root element for name
-#         name_item = QStandardItem(self.__dict__()["name"])
-#         name_item.setEditable(False)
-#         name_item.setDragEnabled(True)
-#         name_item.setDropEnabled(True)
-#         QStandardItem.__init__(self, name_item)
-
-#         # Add ship items
-#         def add_item(key, value):
-#             key_item = QStandardItem(key)
-#             key_item.setEditable = False
-#             self.appendRow([key_item, QStandardItem(str(value))])
-#         for key in self.__dict__().keys():
-#             if type(self.__dict__()[key]) != list:
-#                 if key != "name":
-#                     add_item(key, self.__dict__()[key])
-
-#             # Add ship's doors and their properties
-#             else:
-#                 for door in self.__dict__()[key]:
-#                     door_item = QStandardItem(door.__dict__()["name"])
-#                     door_item.setEditable(False)
-#                     self.appendRow(door_item)
-#                     for door_key in door.__dict__():
-#                         if door_key != "name":
-#                             door_attr = QStandardItem(door_key)
-#                             door_attr.setEditable(True)
-#                             door_item.appendRow([
-#                             door_attr, 
-#                             QStandardItem(str(door.__dict__()[door_key]))])
-#         self.isValid = True
-class SpawnShipButton(QStandardItem):
-    def __init__(self):
-        super().__init__("Add ship")
-        icon = QIcon(ADD_ICON)
-        self.setIcon(icon)
-
-class SpawnDoorButton(QStandardItem):
-    def __init__(self):
-        super().__init__("Add door")
-        icon = QIcon(ADD_ICON)
-        self.setIcon(icon)
-
 class CustomIconEngine(QIconEngine):
     def __init__(self, special_value: Qt.GlobalColor | Qt.BrushStyle):
         self.special_value = special_value
@@ -98,6 +52,47 @@ class CustomIconEngine(QIconEngine):
         painter.end()
         return pixmap
 
+DISPLAY_ITEM_FLAGS = (~Qt.ItemFlag.ItemIsEditable)
+
+class StaticItem(QStandardItem):
+    def __init__(self, text: str | None):
+        super().__init__()
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        if type(text) == str:
+            self.setText(text)
+        else:
+            self.setText('')
+
+class SpawnShipButton(QStandardItem):
+    def __init__(self):
+        super().__init__("Add ship")
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        icon = QIcon(ADD_ICON)
+        self.setIcon(icon)
+
+class SpawnDoorButton(QStandardItem):
+    def __init__(self):
+        super().__init__("Add door")
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        icon = QIcon(ADD_ICON)
+        self.setIcon(icon)
+
+class ColorButton(QStandardItem):
+    def __init__(self, color: Qt.GlobalColor | QColor):
+        super().__init__('')
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        if type(color) == Qt.GlobalColor:
+            color = Qt.GlobalColor(color)
+        elif type(color) == QColor:
+            color = QColor(color)
+        self.setIcon(QIcon(CustomIconEngine(color)))
+
+class PatternButton(QStandardItem):
+    def __init__(self, pattern: Qt.BrushStyle):
+        super().__init__('')
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        self.setIcon(QIcon(CustomIconEngine(Qt.BrushStyle(pattern))))
+
 class ShipItem(QStandardItem):
     def __init__(self,
                  ship: port_items.Ship = None,
@@ -110,21 +105,23 @@ class ShipItem(QStandardItem):
                       Qt.ItemFlag.ItemIsDropEnabled)
 
         # Add ship items
-        def add_item(key, special_value: Qt.GlobalColor | Qt.BrushStyle = None):
+        def add_item(key):
             key_item = QStandardItem(key)
             key_item.setEditable = False
-            value_item = QStandardItem(str(''))
-            if type(special_value) != None:
-                value_item.setIcon(QIcon(CustomIconEngine(special_value)))
-            self.appendRow([key_item, value_item])
-        for key in port_items.SHIP_ATTR.keys():
-            if key == "Pattern":
-                special_value = Qt.BrushStyle.Dense3Pattern
-            elif key == "Color":
-                special_value = Qt.GlobalColor.blue
+            if key == "Color":
+                value_item = ColorButton(random.randint(0, len(Qt.GlobalColor) - 1))
+            elif key == "Pattern":
+                pattern_arr = list(Qt.BrushStyle)
+                pattern_arr.remove(Qt.BrushStyle.LinearGradientPattern)
+                pattern_arr.remove(Qt.BrushStyle.RadialGradientPattern)
+                pattern_arr.remove(Qt.BrushStyle.ConicalGradientPattern)
+                pattern_arr.remove(Qt.BrushStyle.TexturePattern)
+                pattern_arr.remove(Qt.BrushStyle.NoBrush)
+                value_item = PatternButton(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
             else:
-                special_value = None
-            add_item(key, special_value)
+                value_item = QStandardItem(str(''))
+            self.appendRow([key_item, value_item])
+        for key in port_items.SHIP_ATTR.keys(): add_item(key)
 
         # Add door spawning button
         self._door_button = SpawnDoorButton()
@@ -138,28 +135,12 @@ class ShipItem(QStandardItem):
 
         # Add door items
         def add_item(key, value):
-            key_item = QStandardItem(key)
-            key_item.setEditable = False
+            key_item = StaticItem(key)
             door.appendRow([key_item, QStandardItem(str(value))])
         for key in port_items.DOOR_ATTR.keys():
             add_item(key, '')
         self._door_button = SpawnDoorButton()
         self.appendRow(self._door_button)
-
-        #     # Add ship's doors and their properties
-        #     else:
-        #         for door in self.__dict__()[key]:
-        #             door_item = QStandardItem(door.__dict__()["name"])
-        #             door_item.setEditable(False)
-        #             self.appendRow(door_item)
-        #             for door_key in door.__dict__():
-        #                 if door_key != "name":
-        #                     door_attr = QStandardItem(door_key)
-        #                     door_attr.setEditable(True)
-        #                     door_item.appendRow([
-        #                     door_attr, 
-        #                     QStandardItem(str(door.__dict__()[door_key]))])
-        # self.isValid = True
 
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
@@ -208,3 +189,7 @@ class ShipModel(QStandardItemModel):
             self._add_ship(button)
         elif button.__class__ == SpawnDoorButton:
             button.parent().add_door()
+        elif button.__class__ == ColorButton:
+            print("ColorDialog")
+        elif button.__class__ == PatternButton:
+            print("PatternDialog")

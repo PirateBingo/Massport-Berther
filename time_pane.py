@@ -17,7 +17,6 @@ class TimePane(QSplitter):
             self.date_dict = {}
             #FIXME: Determine minimum size of calender naturally
             # Row height = 24px, Header height = 22 px, 24 * 7 + 22 = 190px?
-            self.setBaseSize(QSize(256, 190))
 
         def add_date(self, date: QDate):
             self.date_dict.update(date, "roncrne")
