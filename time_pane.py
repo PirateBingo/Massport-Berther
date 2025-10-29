@@ -21,10 +21,6 @@ class TimePane(QSplitter):
         def add_date(self, date: QDate):
             self.date_dict.update(date, "roncrne")
 
-        def resizeEvent(self, event):
-            print(event)
-            return super().resizeEvent(event)
-
         class DatePlan(QDate):
             def __init__(self, date: QDate):
                 super().__init__(date)

@@ -10,12 +10,24 @@ from PySide6.QtGui import *
 import port_items
 from main import get_icon
 
+COLUMN_COUNT = 2
+
 ADD_ICON = get_icon("add")
 ASTERISK_ICON = get_icon("asterisk")
 INVALID_ICON = get_icon("invalid")
-
+SIDE_ICONS = {port_items.Side.both: get_icon("sides_both"),
+              port_items.Side.port: get_icon("sides_port"),
+              port_items.Side.starboard: get_icon("sides_starboard")}
 SHIP_DIR = os.path.join(os.getcwd(), "ships")
 ship_path = lambda s = str: os.path.join(SHIP_DIR, s)
+
+# List of allowed patterns for ships
+pattern_arr = list(Qt.BrushStyle)
+pattern_arr.remove(Qt.BrushStyle.LinearGradientPattern)
+pattern_arr.remove(Qt.BrushStyle.RadialGradientPattern)
+pattern_arr.remove(Qt.BrushStyle.ConicalGradientPattern)
+pattern_arr.remove(Qt.BrushStyle.TexturePattern)
+pattern_arr.remove(Qt.BrushStyle.NoBrush)
 
 class ShipPane(QFrame):
     def __init__(self, parent: QObject=None):
@@ -30,98 +42,207 @@ class ShipPane(QFrame):
             self.clicked.connect(self.model().item_press)
         #TODO: Enforce equal column widths
 
-class CustomIconEngine(QIconEngine):
-    def __init__(self, special_value: Qt.GlobalColor | Qt.BrushStyle):
-        self.special_value = special_value
+class StyleIcon(QIcon):
+    class IconEngine(QIconEngine):
+        def __init__(self, value: QColor | Qt.BrushStyle):
+            super().__init__()
+            self.value = value
+
+        def paint(self, painter: QPainter, rect, mode, state):
+            brush = QBrush()
+            if type(self.value) == Qt.BrushStyle:
+                brush.setColor(Qt.GlobalColor.white)
+                brush.setStyle(self.value)
+            elif type(self.value) == QColor:
+                brush.setColor(self.value)
+                brush.setStyle(Qt.BrushStyle.SolidPattern)
+            painter.fillRect(rect, brush)
+
+        def pixmap(self, size: QSize, mode, state):
+            pixmap = QPixmap(size)
+            painter = QPainter(pixmap)
+            self.paint(painter, pixmap.rect(), mode, state)
+            painter.end()
+            return pixmap
+
+    def __init__(self, value: QColor | Qt.BrushStyle):
+        super().__init__(self.IconEngine(value))
+
+class PatternDialog(QDialog):
+    def __init__(self):
         super().__init__()
+        self.setWindowFlag(Qt.WindowType.Popup)
+        self.setModal(True)
+        self.setWindowTitle("Select Pattern")
 
-    def paint(self, painter: QPainter, rect, mode, state):
-        brush = QBrush()
-        if type(self.special_value) == Qt.BrushStyle:
-            brush.setColor(Qt.GlobalColor.gray)
-            brush.setStyle(self.special_value)
-        elif type(self.special_value) == Qt.GlobalColor:
-            brush.setColor(self.special_value)
-            brush.setStyle(Qt.BrushStyle.SolidPattern)
-        painter.fillRect(rect, brush)
+        self.button = QPushButton("Ok")
+        self.button.setEnabled(False)
+        self.button.pressed.connect(self.return_pattern)
 
-    def pixmap(self, size: QSize, mode, state):
-        pixmap = QPixmap(size)
-        painter = QPainter(pixmap)
-        self.paint(painter, pixmap.rect(), mode, state)
-        painter.end()
-        return pixmap
+        self.list = QTableWidget()
+        self.list.setRowCount(len(pattern_arr))
+        self.list.setColumnCount(2)
+        self.list.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        self.list.verticalHeader().hide()
+        self.list.horizontalHeader().hide()
+        for i in enumerate(pattern_arr):
+            label = QTableWidgetItem(i[1].name)
+            label.setFlags(Qt.ItemFlag.ItemIsSelectable)
+            self.list.setItem(i[0], 0, label)
+
+            item = QTableWidgetItem(StyleIcon(i[1]), '')
+            item.setFlags(~Qt.ItemFlag.ItemIsEditable)
+            self.list.setItem(i[0], 1, item)
+        self.list.itemSelectionChanged.connect(self.item_selected)
+
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(self.list, 0, 0, 1, 3)
+        self.layout().addWidget(self.button, 1, 1, 1, 1)
+    
+    @Slot()
+    def item_selected(self):
+        if len(self.list.selectedItems()) == 0:
+            self.button.setEnabled(False)
+        else:
+            self.button.setEnabled(True)
+
+    @Slot()
+    def return_pattern(self) -> Qt.BrushStyle:
+        self.accept()
+        return Qt.BrushStyle(pattern_arr[self.list.selectedItems()[0].row()])
+
+class WarningDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlag(Qt.WindowType.Popup)
+        self.setModal(True)
+        self.setWindowTitle("Select Pattern")
+
+        self.button = QPushButton("Ok")
+        self.button.setEnabled(False)
+        self.button.pressed.connect(self.return_pattern)
+
+        self.list = QTableWidget()
+        self.list.setRowCount(len(pattern_arr))
+        self.list.setColumnCount(2)
+        self.list.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        self.list.verticalHeader().hide()
+        self.list.horizontalHeader().hide()
+        for i in enumerate(pattern_arr):
+            label = QTableWidgetItem(i[1].name)
+            label.setFlags(Qt.ItemFlag.ItemIsSelectable)
+            self.list.setItem(i[0], 0, label)
+
+            item = QTableWidgetItem(StyleIcon(i[1]), '')
+            item.setFlags(~Qt.ItemFlag.ItemIsEditable)
+            self.list.setItem(i[0], 1, item)
+        self.list.itemSelectionChanged.connect(self.item_selected)
+
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(self.list, 0, 0, 1, 3)
+        self.layout().addWidget(self.button, 1, 1, 1, 1)
+    
+    @Slot()
+    def item_selected(self):
+        if len(self.list.selectedItems()) == 0:
+            self.button.setEnabled(False)
+        else:
+            self.button.setEnabled(True)
+
+    @Slot()
+    def return_pattern(self) -> Qt.BrushStyle:
+        self.accept()
+        return Qt.BrushStyle(pattern_arr[self.list.selectedItems()[0].row()])
 
 DISPLAY_ITEM_FLAGS = (~Qt.ItemFlag.ItemIsEditable)
 
-class StaticItem(QStandardItem):
-    def __init__(self, text: str | None):
-        super().__init__()
+class Label(QStandardItem):
+    def __init__(self, item_text: str = None,  item_type = None):
+        self.item_type = item_type
+        self.item_text = item_text
+        super().__init__(self.item_text)
+
+class StaticItem(Label):
+    def __init__(self, text: str = None):
+        self.item_text = text
+        super().__init__(self.item_text)
         self.setFlags(DISPLAY_ITEM_FLAGS)
-        if type(text) == str:
-            self.setText(text)
+        if type(self.item_text) == str:
+            self.setText(self.item_text)
         else:
             self.setText('')
 
-class SpawnShipButton(QStandardItem):
+class SpawnShipButton(Label):
     def __init__(self):
         super().__init__("Add ship")
         self.setFlags(DISPLAY_ITEM_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
-class SpawnDoorButton(QStandardItem):
+class SpawnDoorButton(Label):
     def __init__(self):
         super().__init__("Add door")
         self.setFlags(DISPLAY_ITEM_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
-class ColorButton(QStandardItem):
-    def __init__(self, color: Qt.GlobalColor | QColor):
-        super().__init__('')
+class ColorButton(Label):
+    def __init__(self, color: QColor):
+        super().__init__()
         self.setFlags(DISPLAY_ITEM_FLAGS)
-        if type(color) == Qt.GlobalColor:
-            color = Qt.GlobalColor(color)
-        elif type(color) == QColor:
-            color = QColor(color)
-        self.setIcon(QIcon(CustomIconEngine(color)))
+        self.update_color(color)
 
-class PatternButton(QStandardItem):
+    def update_color(self, color: QColor):
+        self.setIcon(StyleIcon(color))
+
+class PatternButton(Label):
     def __init__(self, pattern: Qt.BrushStyle):
+        super().__init__()
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        self.update_pattern(pattern)
+    
+    def update_pattern(self, pattern: Qt.BrushStyle):
+        self.setIcon(StyleIcon(Qt.BrushStyle(pattern)))
+
+class SideButton(Label):
+    def __init__(self):
         super().__init__('')
         self.setFlags(DISPLAY_ITEM_FLAGS)
-        self.setIcon(QIcon(CustomIconEngine(Qt.BrushStyle(pattern))))
+        self.i = 0
+        self.side = port_items.Side.both
+        self.update_side()
+    
+    def update_side(self):
+        icon = QIcon(SIDE_ICONS.get(self.side))
+        self.setIcon(icon)
+    
+    def increment_side(self):
+        self.i = (self.i + 1) % len(port_items.Side)
+        self.side = port_items.Side(self.i)
+        self.update_side()
 
-class ShipItem(QStandardItem):
-    def __init__(self,
-                 ship: port_items.Ship = None,
-                 color: Qt.GlobalColor = None,
-                 pattern: Qt.BrushStyle = None):
-        # Initialize root element for name
-        super().__init__('')
-        self.setFlags(Qt.ItemFlag.ItemIsEditable |
-                      Qt.ItemFlag.ItemIsDragEnabled | 
-                      Qt.ItemFlag.ItemIsDropEnabled)
+class ShipItem(Label):
+    def __init__(self, ship: port_items.Ship = None):
 
         # Add ship items
-        def add_item(key):
-            key_item = QStandardItem(key)
-            key_item.setEditable = False
-            if key == "Color":
-                value_item = ColorButton(random.randint(0, len(Qt.GlobalColor) - 1))
-            elif key == "Pattern":
-                pattern_arr = list(Qt.BrushStyle)
-                pattern_arr.remove(Qt.BrushStyle.LinearGradientPattern)
-                pattern_arr.remove(Qt.BrushStyle.RadialGradientPattern)
-                pattern_arr.remove(Qt.BrushStyle.ConicalGradientPattern)
-                pattern_arr.remove(Qt.BrushStyle.TexturePattern)
-                pattern_arr.remove(Qt.BrushStyle.NoBrush)
-                value_item = PatternButton(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
+        for i, attr in enumerate(port_items.Ship.ShipAttr):
+            if i == 0: # Offset name
+                super().__init__('', attr.type)
+                continue
             else:
-                value_item = QStandardItem(str(''))
+                key_item = StaticItem(attr.string)
+                key_item.setEditable = False
+                if attr.type == Qt.GlobalColor:
+                    self.color = QColor(Qt.GlobalColor(
+                                 random.randint(0, len(Qt.GlobalColor) - 1)))
+                    value_item = ColorButton(self.color)
+                elif attr.type == Qt.BrushStyle:
+                    self.pattern = pattern_arr[
+                                   random.randint(0, len(pattern_arr) - 1)]
+                    value_item = PatternButton(self.pattern)
+                else:
+                    value_item = Label('', attr.type)
             self.appendRow([key_item, value_item])
-        for key in port_items.SHIP_ATTR.keys(): add_item(key)
 
         # Add door spawning button
         self._door_button = SpawnDoorButton()
@@ -134,22 +255,40 @@ class ShipItem(QStandardItem):
         self.appendRow(door)
 
         # Add door items
-        def add_item(key, value):
-            key_item = StaticItem(key)
-            door.appendRow([key_item, QStandardItem(str(value))])
-        for key in port_items.DOOR_ATTR.keys():
-            add_item(key, '')
+        for i, attr in enumerate(list(port_items.Ship.Door.DoorAttr)):
+            if i == 0:
+                continue
+            key_item = StaticItem(attr.string)
+            if attr.type == port_items.Side:
+                value_item = SideButton()
+            else:
+                value_item = Label('', attr.type)
+            door.appendRow([key_item, value_item])
         self._door_button = SpawnDoorButton()
         self.appendRow(self._door_button)
 
+    def get_color(self):
+        return self.color
+
+    def set_color(self, color: QColor):
+        self.color = color
+
+    def get_pattern(self):
+        return self.pattern
+
+    def set_pattern(self, pattern: Qt.BrushStyle):
+        self.pattern = pattern
+
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
-        super().__init__(0, 2, parent)
-        self.setHorizontalHeaderLabels(['','']) # Empty headers
+        super().__init__(0, COLUMN_COUNT, parent)
+        self.setHorizontalHeaderLabels(['']*COLUMN_COUNT) # Empty headers
         self._read_ships()
+
         self._ship_button = SpawnShipButton()
         self.setItem(0, self._ship_button)
-        # self.itemChanged.connect(lambda a = QStandardItem: print(a.index())) #TODO: implement function
+        #TODO: implement function
+        self.itemChanged.connect(lambda item = QStandardItem: self._check_value(item))
 
     def _read_ships(self):
         for path in os.listdir(SHIP_DIR):
@@ -157,13 +296,13 @@ class ShipModel(QStandardItemModel):
                 root = self.invisibleRootItem()
                 root.appendRow(ShipItem(path))
 
+    # Load json data
     def _read_ship(self, json_path):
-        # Load json data
         if os.path.splitext(json_path)[1] != ".json":
             raise ValueError("Argued file is not a .json type")
         ship_dict = port_items.Ship(json_path)
         ship_name = os.path.splitext(os.path.basename(ship_dict))[0]
-        ship_item = ShipItem(ship_name)
+        ShipItem(ship_name)
 
     def _write_ship(self, ship: port_items.Ship):
         path = ship_path(ship._name)
@@ -190,6 +329,49 @@ class ShipModel(QStandardItemModel):
         elif button.__class__ == SpawnDoorButton:
             button.parent().add_door()
         elif button.__class__ == ColorButton:
-            print("ColorDialog")
+            color_dialog = QColorDialog()
+            color_dialog.exec()
+            color = color_dialog.selectedColor()
+            button.update_color(color)
         elif button.__class__ == PatternButton:
-            print("PatternDialog")
+            pattern_dialog = PatternDialog()
+            pattern_dialog.exec()
+            pattern = pattern_dialog.return_pattern()
+            button.update_pattern(pattern)
+        elif button.__class__ == SideButton:
+            button.increment_side()
+    
+    def _check_value(self, item: Label):
+        print(item.text())
+        # print(self.item(item.index().row(), 0))
+        print(item.item_type)
+
+# Debug
+x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
+print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
+x = port_items.Ship.from_dict(
+                    {"ship_name": "sdsd",
+                     "length": 1.0,
+                     "pattern": 1,
+                     "color": 1,
+                     "width": 1,
+                     "ththt": {
+                         "side": 1,
+                         "bow_distance": 1,
+                         "stern_distance": 1,
+                         "width": 1,
+                         "height": 1,
+                         "height_above_waterline": 1
+                     },
+                     "sds": {
+                         "side": 1,
+                         "bow_distance": 1,
+                         "stern_distance": 1,
+                         "width": 1,
+                         "height": 1,
+                         "height_above_waterline": 1
+                     }})
+print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
+print(x.to_dict())
+print(x.doors[0].to_dict())
+# print(x.get_height())

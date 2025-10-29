@@ -37,6 +37,8 @@ class Window(QSplitter):
         exit_action.setShortcut(QKeySequence.Quit)
         exit_action.triggered.connect(self.close)
 
+        QIcon.setThemeName("Material Symbols Outlined")
+
         # Setup widgets
         self._time_pane = time_pane.TimePane(self)
         self._ship_pane = ship_pane.ShipPane(self)
