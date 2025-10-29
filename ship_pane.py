@@ -374,4 +374,5 @@ x = port_items.Ship.from_dict(
 print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
 print(x.to_dict())
 print(x.doors[0].to_dict())
-# print(x.get_height())
+print(x.get_height())
+print(x.)
