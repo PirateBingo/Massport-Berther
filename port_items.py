@@ -3,7 +3,8 @@ import os
 import json
 import numpy as np
 import typing
-from enum import Enum
+import enum
+from operator import call
 
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
@@ -68,159 +69,143 @@ class Port(PortItem):
         super().__init__(graphics_view, get_svg(PORT_ID), x=0, y=0)
 
 # https://en.wikipedia.org/wiki/Port_and_starboard
-class Side(Enum):
+class Side(enum.Enum):
     port = 0 # Left side
-    starboard = 1 # Right side
-    both = 2
+    starboard = enum.auto() # Right side
+    both = enum.auto()
 
-DOOR_ATTR = {"Side": Side,
-             "Bow Distance": float,
-             "Stern Distance": float,
-             "Width": float,
-             "Height": float,
-             "Height Above Waterline": float}
-class Door(QGraphicsRectItem):
-    def __init__(self, name: str, side: Side, bow_distance: float,
-                 stern_distance: float, width: float, height: float,
-                 height_above_waterline: float):
-        super().__init__()
-        self.name = name
-        self.side = side
-        self.bow_distance = bow_distance
-        self.stern_distance = stern_distance
-        self.width = width
-        self.height = height
-        self.height_above_waterline = height_above_waterline
-
-    def __dict__(self):
-        return {"name": self.name,
-                "side": self.side,
-                "bow_distance": self.bow_distance,
-                "stern_distance": self.stern_distance,
-                "width": self.width,
-                "height": self.height,
-                "height_above_waterline": self.height_above_waterline}
-
-    def __eq__(self, door):
-        if type(door) != self.__class__:
-            raise ValueError("Cannot compare Ship to non-Ship type")
-        return self.__dict__() == door.__dict__()
-
-SHIP_ATTR = {"Length": float,
-             "Pattern": Qt.BrushStyle,
-             "Color": Qt.GlobalColor,
-             "Width": np.array(Door)}
+class ShipEnum(enum.Enum):
+    def __init__(self, index, type, string):
+        self.index = index
+        self.type = type
+        self.string = string
 
 class Ship(PortItem):
-    @typing.overload
-    def __init__(self, name: str, length: float,
-                 pattern: Qt.BrushStyle, color: Qt.GlobalColor):
-        super().__init__()
-        self.name = name
-        self.length = length
-        self.pattern = pattern
-        self.color = color
-        self.doors = np.array(object=Door)
-        self._sanitize_attributes()
+    class Door():
+        class DoorAttr(ShipEnum):
+            door_name = (enum.auto(), str, "Door Name")
+            side = (enum.auto(), Side, "Side")
+            bow_distance = (enum.auto(), float, "Bow Distance")
+            stern_distance = (enum.auto(), float, "Stern Distance")
+            width = (enum.auto(), float, "Width")
+            height = (enum.auto(), float, "Height")
+            height_above_waterline = (enum.auto(), float, "Height Above Waterline")
 
-    def __init__(self, ship: dict | str):
-        # Load json data
-        super().__init__()
+        def __init__(self, *args):
+            door = {}
+            for i, arg in enumerate(args):
+                attr = list(self.DoorAttr)[i]
+                door.update({attr.name: arg})
+                if i > len(self.DoorAttr):
+                    raise IndexError("Too many arguments provided")
+            self.from_dict(door)
+
+        @classmethod
+        def from_dict(cls, door: dict | str, name: str) -> typing.Self:
+            for i, door_key in enumerate(cls.DoorAttr):
+                if i <= len(cls.DoorAttr) - 1:
+                    try:
+                        door_attr = list(cls.DoorAttr)[i]
+                        if i == 0:
+                            door_val = name
+                        else:
+                            door_val = door[door_key.name]
+                        door_val = call(door_attr.type, door_val)
+                        setattr(cls, door_attr.name, door_val)
+                    except Exception as error:
+                        raise error
+            return cls.__new__(cls)
+
+        def to_dict(self):
+            d = {}
+            for i, attr in enumerate(self.DoorAttr):
+                if i == 0:
+                    door_name = getattr(self, attr.name)
+                else:
+                    d.update({attr.name: getattr(self, attr.name)})
+            return {door_name: d}
+
+        #TODO: Implement
+        def __eq__(self, door):
+            if type(door) != self.__class__:
+                raise ValueError("Cannot compare Ship to non-Ship type")
+            return self.__dict__() == door.__dict__()
+
+    class ShipAttr(ShipEnum):
+        ship_name = (enum.auto(), str, "Ship Name")
+        length = (enum.auto(), float, "Length")
+        pattern = (enum.auto(), Qt.BrushStyle, "Pattern")
+        color = (enum.auto(), Qt.GlobalColor, "Color")
+        width = (enum.auto(), float, "Width")
+        doors = (enum.auto(), dict, "Doors")
+
+    # Convert arguments to dict; don't accept doors
+    def __init__(self, *args):
+        ship = {}
+        for i, arg in enumerate(args):
+            attr = list(self.ShipAttr)[i]
+            ship.update({attr.name: arg})
+            if i > len(self.ShipAttr):
+                raise IndexError("Too many arguments provided")
+        self.from_dict(ship)
+
+    @classmethod
+    def from_dict(cls, ship: dict | str) -> typing.Self:
+        # If given json file, load into dict
         if type(ship) is str:
-            self.name = os.path.splitext(os.path.basename(ship))[0]
-            self.doors = []
             if os.path.splitext(ship)[1] != ".json":
                 raise ValueError("Argued file is not a .json type")
             else:
-                with open(ship, "r+") as json_file:
-                    ship = json.load(json_file)
+                path = os.path.splitext(os.path.basename(ship))[0]
+                with open(path, "r+") as json_file:
+                    ship_dict = json.load(json_file)
 
-        for ship_key in enumerate(ship.keys()):
-            if ship_key[1] == "length":
-                self.length = ship[ship_key[1]]
-            elif ship_key[1] == "pattern":
-                self.pattern = ship[ship_key[1]]
-            elif ship_key[1] == "color":
-                self.color = ship[ship_key[1]]
+        # Use dict if given
+        else:
+            ship_dict = ship
 
-            # Parse doors; door object names always start with "door"
-            elif str(ship_key[1][:4]).lower() == "door":
-                name = ship_key[1]
-                for door_key in enumerate(ship[ship_key[1]]):
-                    if door_key[1] == "side":
-                        side = ship[ship_key[1]][door_key[1]]
-                    if door_key[1] == "bow_distance":
-                        bow_distance = ship[ship_key[1]][door_key[1]]
-                    if door_key[1] == "stern_distance":
-                        stern_distance = ship[ship_key[1]][door_key[1]]
-                    if door_key[1] == "width":
-                        width = ship[ship_key[1]][door_key[1]]
-                    if door_key[1] == "height":
-                        height = ship[ship_key[1]][door_key[1]]
-                    if door_key[1] == "height_above_waterline":
-                        height_above_waterline = ship[ship_key[1]][door_key[1]]
-                self.doors.append(Door(name=name,
-                                       side=side,
-                                       bow_distance=bow_distance,
-                                       stern_distance=stern_distance,
-                                       width=width,
-                                       height=height,
-                                       height_above_waterline=height_above_waterline))
-        self._sanitize_attributes()
-
-    def _sanitize_attributes(self):
+        # Try to convert dict to new ship object
+        cls.doors = []
         try:
-            self.name = str(self.name)
-            self.length = float(self.length)
-            self.pattern = (Qt.BrushStyle(int(self.pattern) % len(Qt.BrushStyle))
-                            if type(self.pattern) is int
-                            else Qt.BrushStyle(self.pattern))
-            self.color =  QColor(self.color)
-        except ValueError as error:
-            raise ValueError(f"{error}\n Ship was given incorrect value type")
-        except NameError as error:
-            raise NameError(f"{error}\n Ship never given value for argument")
-        except Exception:
-            raise Exception
+            for i, ship_key in enumerate(ship_dict.keys()):
+                ship_val = ship_dict[ship_key]
+                ship_attr = list(cls.ShipAttr)[min(i, len(cls.ShipAttr) - 1)]
+                if i < len(cls.ShipAttr) - 1:
 
-        if len(self.doors) == 0:
-            print("Door array is empty")
-            self.doorless = True
-        elif any([type(door) is not Door for door in self.doors]):
-            raise ValueError("Door array contains non-door types")
-        else:
-            self.doorless = False
-            self.height = max([door.height_above_waterline
-                               for door in self.doors])
+                    try:
+                        ship_val = call(ship_attr.type, ship_val)
+                        setattr(cls, ship_attr.name, ship_val)
+                    except Exception as error:
+                        raise error
 
-    def __dict__(self):
-        return {"name": self.name,
-                "length": self.length,
-                "pattern": self.pattern,
-                "color": self.color,
-                "height": self.height,
-                "doors": [door for door in self.doors]}
+                else:
+                    door_name = list(ship_dict.keys())[i]
+                    cls.doors.append(cls.Door.from_dict(ship_val, door_name)) # type: ignore
+
+            return cls.__new__(cls)
+
+        except Exception as error:
+            raise error
+
+    def to_dict(self):
+        d = {}
+        for attr in self.ShipAttr:
+            d.update({attr.name: getattr(self, attr.name)})
+        return d
     
+    # TODO: Create function that checks if a ship can be implemented and saved
+    def isComplete(self):
+        pass
+    
+    #TODO:
     def __eq__(self, ship):
-        if type(ship) != self.__class__:
-            raise ValueError("Cannot compare Ship to non-Ship type")
-        else:
-            if (self.name == ship.name and
-                self.length == ship.length and
-                self.pattern == ship.pattern and
-                self.color == ship.color and
-                self.height == ship.height and
-                len(self.doors) == len(ship.doors) and
-                all([self.doors[i] == ship.doors[i] for i in range(len(self.doors))])):
-                return True
-            else:
-                return False
+        pass
 
     def add_door(self, door: Door):
         np.append(self.doors, door)
         self.calc_height()
 
-    def calc_height(self):
+    def get_height(self):
         self.height = self.doors.max()
         
     #TODO:
