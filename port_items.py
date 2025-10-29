@@ -192,11 +192,11 @@ class Ship(PortItem):
         for attr in self.ShipAttr:
             d.update({attr.name: getattr(self, attr.name)})
         return d
-    
+
     # TODO: Create function that checks if a ship can be implemented and saved
     def isComplete(self):
         pass
-    
+
     #TODO:
     def __eq__(self, ship):
         pass
@@ -206,8 +206,8 @@ class Ship(PortItem):
         self.calc_height()
 
     def get_height(self):
-        self.height = self.doors.max()
-        
+        return np.max([door.height for door in self.doors])
+
     #TODO:
     def render(self, graphWidget: QGraphicsView, scene: QGraphicsScene,
                 x: float, y: float, w: float, h: float):
