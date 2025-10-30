@@ -113,47 +113,23 @@ class PatternDialog(QDialog):
         return Qt.BrushStyle(pattern_arr[self.list.selectedItems()[0].row()])
 
 class WarningDialog(QDialog):
-    def __init__(self):
+    def __init__(self, text: str):
         super().__init__()
         self.setWindowFlag(Qt.WindowType.Popup)
         self.setModal(True)
-        self.setWindowTitle("Select Pattern")
+        self.setWindowTitle("Warning")
 
+        # Define warning message
+        self.message = QLabel(text)
+
+        # Define "ok" button
         self.button = QPushButton("Ok")
-        self.button.setEnabled(False)
-        self.button.pressed.connect(self.return_pattern)
+        self.button.pressed.connect(lambda: self.done(1))
 
-        self.list = QTableWidget()
-        self.list.setRowCount(len(pattern_arr))
-        self.list.setColumnCount(2)
-        self.list.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
-        self.list.verticalHeader().hide()
-        self.list.horizontalHeader().hide()
-        for i in enumerate(pattern_arr):
-            label = QTableWidgetItem(i[1].name)
-            label.setFlags(Qt.ItemFlag.ItemIsSelectable)
-            self.list.setItem(i[0], 0, label)
-
-            item = QTableWidgetItem(StyleIcon(i[1]), '')
-            item.setFlags(~Qt.ItemFlag.ItemIsEditable)
-            self.list.setItem(i[0], 1, item)
-        self.list.itemSelectionChanged.connect(self.item_selected)
-
+        # Layout Configuration
         self.setLayout(QGridLayout())
-        self.layout().addWidget(self.list, 0, 0, 1, 3)
-        self.layout().addWidget(self.button, 1, 1, 1, 1)
-    
-    @Slot()
-    def item_selected(self):
-        if len(self.list.selectedItems()) == 0:
-            self.button.setEnabled(False)
-        else:
-            self.button.setEnabled(True)
-
-    @Slot()
-    def return_pattern(self) -> Qt.BrushStyle:
-        self.accept()
-        return Qt.BrushStyle(pattern_arr[self.list.selectedItems()[0].row()])
+        self.layout().addWidget(self.message, 1, 1, 1, 1)
+        self.layout().addWidget(self.button, 2, 1, 1, 1)
 
 DISPLAY_ITEM_FLAGS = (~Qt.ItemFlag.ItemIsEditable | ~Qt.ItemFlag.ItemIsEditable)
 
@@ -356,15 +332,17 @@ class ShipModel(QStandardItemModel):
     @Slot()
     def _check_value(self, item: Label):
         attr = self.itemFromIndex(self.indexFromItem(item).siblingAtColumn(0))
-        try:
-            item_value = call(item.item_type, item.text())
-            if type(item_value) == item.item_type:
-                item.isValid = True
-            else:
+        if (type(item) != ColorButton and type(item) != PatternButton
+            and type(item) != SideButton):
+            try:
+                item_value = call(item.item_type, item.text())
+                if type(item_value) == item.item_type:
+                    item.isValid = True
+                else:
+                    item.isValid = False
+            except Exception as error:
                 item.isValid = False
-        except Exception as error:
-            print(error)
-            item.isValid = False
+                WarningDialog(str(error)).exec()
         if item.isValid:
             color = Qt.GlobalColor.green
         else:
