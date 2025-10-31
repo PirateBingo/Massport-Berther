@@ -117,6 +117,7 @@ class WarningDialog(QDialog):
         super().__init__()
         self.setWindowFlag(Qt.WindowType.Popup)
         self.setModal(True)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setWindowTitle("Warning")
 
         # Define warning message
@@ -125,6 +126,8 @@ class WarningDialog(QDialog):
         # Define "ok" button
         self.button = QPushButton("Ok")
         self.button.pressed.connect(lambda: self.done(1))
+        self.button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.button.setFocus()
 
         # Layout Configuration
         self.setLayout(QGridLayout())
@@ -273,10 +276,12 @@ class ShipModel(QStandardItemModel):
         self._ship_button = SpawnShipButton()
         self.setItem(0, self._ship_button)
         self.setItem(0, 1, StaticItem())
-        #TODO: implement function
+
         self.changeConnect = lambda: self.itemChanged.connect(self._check_value)
         self.changeDisconnect = lambda: self.itemChanged.disconnect()
         self.changeConnect()
+
+        self.rowsInserted.connect(self._check_all)
 
     def _read_ships(self):
         for path in os.listdir(SHIP_DIR):
@@ -328,7 +333,7 @@ class ShipModel(QStandardItemModel):
             button.update_pattern(pattern)
         elif button.__class__ == SideButton:
             button.increment_side()
-    
+
     @Slot()
     def _check_value(self, item: Label):
         attr = self.itemFromIndex(self.indexFromItem(item).siblingAtColumn(0))
@@ -351,6 +356,10 @@ class ShipModel(QStandardItemModel):
         attr.setForeground(color)
         item.setForeground(color)
         self.changeConnect()
+    
+    def _check_all(self):
+        print("gnrjbgnriongrignriongrinriogrno")
+        pass
 
 # Debug
 x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
@@ -381,3 +390,5 @@ print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
 print(x.to_dict())
 print(x.doors[0].to_dict())
 print(x.get_height())
+debug_message = "DEBUG END"
+print(debug_message.rjust(82 - len(debug_message)))
