@@ -145,32 +145,29 @@ class Label(QStandardItem):
 
 class StaticItem(Label):
     def __init__(self, text: str = None):
-        self.item_text = text
+        self.item_text = text if type(text) == str else ''
         super().__init__(self.item_text)
         self.setEditable(False)
         self.setSelectable(False)
-        if type(self.item_text) == str:
-            self.setText(self.item_text)
-        else:
-            self.setText('')
+        self.setText(self.item_text)
 
-class SpawnShipButton(QStandardItem):
+class SpawnShipButton(Label):
     def __init__(self):
-        super().__init__("Add ship")
+        super().__init__("Add ship", None, True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
-class SpawnDoorButton(QStandardItem):
+class SpawnDoorButton(Label):
     def __init__(self):
-        super().__init__("Add door")
+        super().__init__("Add door", None, True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
 class ColorButton(Label):
     def __init__(self, color: QColor):
-        super().__init__(isValid=True)
+        super().__init__(item_type=QColor, isValid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         self.update_color(color)
 
@@ -179,7 +176,7 @@ class ColorButton(Label):
 
 class PatternButton(Label):
     def __init__(self, pattern: Qt.BrushStyle):
-        super().__init__(isValid=True)
+        super().__init__(item_type=Qt.BrushStyle, isValid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         self.update_pattern(pattern)
     
@@ -188,7 +185,7 @@ class PatternButton(Label):
 
 class SideButton(Label):
     def __init__(self):
-        super().__init__(isValid=True)
+        super().__init__(item_type=port_items.Side, isValid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         self.i = 0
         self.side = port_items.Side.both
@@ -238,7 +235,7 @@ class ShipItem(Label):
     def add_door(self):
         self.removeRow(self._door_button.row())
 
-        #TODO: 
+        #TODO: Auto naming
         door = Label('', list(port_items.Ship.Door.DoorAttr)[0])
         self.appendRow([door, StaticItem()])
 
@@ -270,18 +267,16 @@ class ShipItem(Label):
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
         super().__init__(0, COLUMN_COUNT, parent)
-        self.setHorizontalHeaderLabels(['']*COLUMN_COUNT) # Empty headers
+        self.setHorizontalHeaderLabels([''] * COLUMN_COUNT) # Empty headers
         self._read_ships()
 
         self._ship_button = SpawnShipButton()
         self.setItem(0, self._ship_button)
         self.setItem(0, 1, StaticItem())
 
-        self.changeConnect = lambda: self.itemChanged.connect(self._check_value)
+        self.changeConnect = lambda: self.itemChanged.connect(self._check_all)
         self.changeDisconnect = lambda: self.itemChanged.disconnect()
         self.changeConnect()
-
-        self.rowsInserted.connect(self._check_all)
 
     def _read_ships(self):
         for path in os.listdir(SHIP_DIR):
@@ -312,15 +307,17 @@ class ShipModel(QStandardItemModel):
 
     def _add_ship(self, button: SpawnShipButton):
         self.removeRow(button.row())
-        self.appendRow([ShipItem(), StaticItem()])
-        self.appendRow([SpawnShipButton(), StaticItem()])
+        self.appendRow([ShipItem(), StaticItem('')])
+        self.appendRow([SpawnShipButton(), StaticItem('')])
 
     def item_press(self, index: QModelIndex):
         button = self.itemFromIndex(index)
         if button.__class__ == SpawnShipButton:
             self._add_ship(button)
+            self._check_all()
         elif button.__class__ == SpawnDoorButton:
             button.parent().add_door()
+            self._check_all()
         elif button.__class__ == ColorButton:
             color_dialog = QColorDialog()
             color_dialog.exec()
@@ -334,32 +331,59 @@ class ShipModel(QStandardItemModel):
         elif button.__class__ == SideButton:
             button.increment_side()
 
-    @Slot()
     def _check_value(self, item: Label):
-        attr = self.itemFromIndex(self.indexFromItem(item).siblingAtColumn(0))
-        if (type(item) != ColorButton and type(item) != PatternButton
-            and type(item) != SideButton):
+        # Assess validity of the label entry
+        attr = self.itemFromIndex(self.indexFromItem(item).siblingAtColumn(1))
+        print(attr.__class__)
+        if attr.__class__ == Label and attr.item_type != None:
             try:
-                item_value = call(item.item_type, item.text())
-                if type(item_value) == item.item_type:
-                    item.isValid = True
+                if attr.text() == '':
+                    item.isValid = False # Show no warnings if given no input
                 else:
-                    item.isValid = False
+                    item_value = call(attr.item_type, attr.text())
+                    if type(item_value) == attr.item_type:
+                        item.isValid = True
+                    else:
+                        item.isValid = False
             except Exception as error:
                 item.isValid = False
                 WarningDialog(str(error)).exec()
-        if item.isValid:
-            color = Qt.GlobalColor.green
+                attr.setText('')
+
+            # Only color the entry values; special values always valid
+            if item.isValid:
+                color = Qt.GlobalColor.green
+            else:
+                color = Qt.GlobalColor.red
+
+            self.changeDisconnect()
+            attr.setForeground(color)
+            item.setForeground(color)
+            self.changeConnect()
+
+        # Do not color special values
         else:
-            color = Qt.GlobalColor.red
-        self.changeDisconnect()
-        attr.setForeground(color)
-        item.setForeground(color)
-        self.changeConnect()
-    
+            item.isValid = True
+
+    @Slot()
     def _check_all(self):
-        print("gnrjbgnriongrignriongrinriogrno")
-        pass
+        # row_exists = lambda r: 
+        i = 0
+        while True:
+            if(self.checkIndex(self.indexFromItem(self.item(i)))
+               and type(self.item(i)) == ShipItem):
+                j = 0
+                while True:
+                    item = self.item(i).child(j)
+                    if item != None:
+                        self._check_value(item)
+                        j += 1
+                    else:
+                        break
+                i += 1
+            else:
+                print(end='\n')
+                break
 
 # Debug
 x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
