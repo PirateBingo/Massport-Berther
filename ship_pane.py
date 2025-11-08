@@ -131,14 +131,7 @@ class WarningDialog(QDialog):
 
 DISPLAY_ITEM_FLAGS = (~Qt.ItemFlag.ItemIsEditable | ~Qt.ItemFlag.ItemIsEditable)
 
-class Label(QStandardItem):
-    def __init__(self, item_text: str = None, item_type = None, valid: bool = False):
-        self.item_type = item_type
-        self.item_text = item_text
-        self.valid = valid
-        super().__init__(self.item_text)
-
-class StaticItem(Label):
+class StaticItem(QStandardItem):
     def __init__(self, text: str = None):
         self.item_text = text if type(text) == str else ''
         super().__init__(self.item_text)
@@ -160,9 +153,9 @@ class AddDoorButton(QStandardItem):
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
-class ColorButton(Label):
+class ColorButton(QStandardItem):
     def __init__(self, color: QColor | None = None):
-        super().__init__(item_type=QColor, valid=True)
+        super().__init__()
         self.setFlags(DISPLAY_ITEM_FLAGS)
         if color == None:
             self.update_color(QColor(Qt.GlobalColor(random.randint(0, len(Qt.GlobalColor) - 1))))
@@ -172,9 +165,9 @@ class ColorButton(Label):
     def update_color(self, color: QColor):
         self.setIcon(StyleIcon(color))
 
-class PatternButton(Label):
+class PatternButton(QStandardItem):
     def __init__(self, pattern: Qt.BrushStyle | None = None):
-        super().__init__(item_type=Qt.BrushStyle, valid=True)
+        super().__init__()
         self.setFlags(DISPLAY_ITEM_FLAGS)
         if pattern == None:
             self.update_pattern(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
@@ -184,9 +177,9 @@ class PatternButton(Label):
     def update_pattern(self, pattern: Qt.BrushStyle):
         self.setIcon(StyleIcon(Qt.BrushStyle(pattern)))
 
-class SideButton(Label):
+class SideButton(QStandardItem):
     def __init__(self):
-        super().__init__(item_type=Side, valid=True)
+        super().__init__()
         self.setFlags(DISPLAY_ITEM_FLAGS)
         self.i = 0
         self.side = Side.both
@@ -366,13 +359,25 @@ class Ship(QStandardItem):
             else:
                 self.setForeground(Qt.GlobalColor.red)
 
-    def __init__(self, parent: QStandardItemModel, name: str):
+    def __init__(self, parent: QStandardItemModel, name: str, *args):
         super().__init__(name)
         row = parent.rowCount()
         parent.setItem(row, 0, self)
         parent.setItem(row, 1, StaticItem())
         self._init_vals()
-        self.valid = False
+        if len(args) == 0:
+            self.valid = False
+        else:
+            for arg in args:
+                self.child()
+
+    @classmethod
+    def from_json(self, s: dict | str):
+        if type(s) == str:
+            # if os.path.isfile(str) and 
+            # os.PathLike
+            # path = os.path.isfile(str)
+            pass
 
     def _init_vals(self):
         self.ShipItem(self, "Length", "length", float)
@@ -452,33 +457,4 @@ class Ship(QStandardItem):
         self.model().change_connect()
 
 # # Debug
-# x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
-# print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
-# x = port_items.Ship.from_dict(
-#                     {"ship_name": "sdsd",
-#                      "length": 1.0,
-#                      "pattern": 1,
-#                      "color": 1,
-#                      "width": 1,
-#                      "ththt": {
-#                          "side": 1,
-#                          "bow_distance": 1,
-#                          "stern_distance": 1,
-#                          "width": 1,
-#                          "height": 1,
-#                          "height_above_waterline": 1
-#                      },
-#                      "sds": {
-#                          "side": 1,
-#                          "bow_distance": 1,
-#                          "stern_distance": 1,
-#                          "width": 1,
-#                          "height": 1,
-#                          "height_above_waterline": 1
-#                      }})
-# print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
-# print(x.to_dict())
-# print(x.doors[0].to_dict())
-# print(x.get_height())
-# debug_message = "DEBUG END"
-# print(debug_message.rjust(82 - len(debug_message)))
+# x = Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
