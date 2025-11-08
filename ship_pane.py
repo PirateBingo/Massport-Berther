@@ -368,6 +368,7 @@ class Ship(QStandardItem):
         self.check()
     
     def check(self):
+        self.model().change_disconnect()
         i = 0
         while True:
             item = self.child(i, 0)
@@ -387,6 +388,7 @@ class Ship(QStandardItem):
             else:
                 break
             i += 1
+        self.model().change_connect()
 
 # # Debug
 # x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
