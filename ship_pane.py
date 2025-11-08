@@ -2,6 +2,7 @@ import os
 import json
 import random
 import numpy as np
+import enum
 from operator import call
 
 from PySide6.QtCore import *
@@ -11,14 +12,20 @@ from PySide6.QtGui import *
 import port_items
 from main import get_icon
 
+# https://en.wikipedia.org/wiki/Port_and_starboard
+class Side(enum.Enum):
+    port = 0 # Left side
+    starboard = enum.auto() # Right side
+    both = enum.auto()
+
 COLUMN_COUNT = 2
 
 ADD_ICON = get_icon("add")
 ASTERISK_ICON = get_icon("asterisk")
 INVALID_ICON = get_icon("invalid")
-SIDE_ICONS = {port_items.Side.both: get_icon("sides_both"),
-              port_items.Side.port: get_icon("sides_port"),
-              port_items.Side.starboard: get_icon("sides_starboard")}
+SIDE_ICONS = {Side.both: get_icon("sides_both"),
+              Side.port: get_icon("sides_port"),
+              Side.starboard: get_icon("sides_starboard")}
 SHIP_DIR = os.path.join(os.getcwd(), "ships")
 ship_path = lambda s = str: os.path.join(SHIP_DIR, s)
 
@@ -29,19 +36,6 @@ pattern_arr.remove(Qt.BrushStyle.RadialGradientPattern)
 pattern_arr.remove(Qt.BrushStyle.ConicalGradientPattern)
 pattern_arr.remove(Qt.BrushStyle.TexturePattern)
 pattern_arr.remove(Qt.BrushStyle.NoBrush)
-
-class ShipPane(QFrame):
-    def __init__(self, parent: QObject=None):
-        super().__init__(parent)
-        self._ship_view = self.ShipView(parent)
-
-    class ShipView(QTreeView):
-        def __init__(self, parent: QObject=None):
-            super().__init__(parent, wordWrap=True, expandsOnDoubleClick=True,
-                             uniformRowHeights=True)
-            self.setModel(ShipModel(self))
-            self.clicked.connect(self.model().item_press)
-        #TODO: Enforce equal column widths
 
 class StyleIcon(QIcon):
     class IconEngine(QIconEngine):
@@ -151,44 +145,50 @@ class StaticItem(Label):
         self.setSelectable(False)
         self.setText(self.item_text)
 
-class SpawnShipButton(Label):
+class AddShipButton(QStandardItem):
     def __init__(self):
-        super().__init__("Add ship", None, True)
+        super().__init__("Add ship")
         self.setFlags(DISPLAY_ITEM_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
-class SpawnDoorButton(Label):
+class AddDoorButton(QStandardItem):
     def __init__(self):
-        super().__init__("Add door", None, True)
+        super().__init__("Add door")
         self.setFlags(DISPLAY_ITEM_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
 class ColorButton(Label):
-    def __init__(self, color: QColor):
+    def __init__(self, color: QColor | None = None):
         super().__init__(item_type=QColor, isValid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
-        self.update_color(color)
+        if color == None:
+            self.update_color(QColor(Qt.GlobalColor(random.randint(0, len(Qt.GlobalColor) - 1))))
+        else:    
+            self.update_color(color)
 
     def update_color(self, color: QColor):
         self.setIcon(StyleIcon(color))
 
 class PatternButton(Label):
-    def __init__(self, pattern: Qt.BrushStyle):
+    def __init__(self, pattern: Qt.BrushStyle | None = None):
         super().__init__(item_type=Qt.BrushStyle, isValid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
-        self.update_pattern(pattern)
+        if pattern == None:
+            self.update_pattern(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
+        else:
+            self.update_pattern(pattern)
     
     def update_pattern(self, pattern: Qt.BrushStyle):
         self.setIcon(StyleIcon(Qt.BrushStyle(pattern)))
 
 class SideButton(Label):
     def __init__(self):
-        super().__init__(item_type=port_items.Side, isValid=True)
+        super().__init__(item_type=Side, isValid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         self.i = 0
-        self.side = port_items.Side.both
+        self.side = Side.both
         self.update_side()
     
     def update_side(self):
@@ -196,223 +196,226 @@ class SideButton(Label):
         self.setIcon(icon)
     
     def increment_side(self):
-        self.i = (self.i + 1) % len(port_items.Side)
-        self.side = port_items.Side(self.i)
+        self.i = (self.i + 1) % len(Side)
+        self.side = Side(self.i)
         self.update_side()
 
-class ShipItem(Label):
-    def __init__(self, ship: port_items.Ship = None):
+class ShipPane(QFrame):
+    def __init__(self, parent: QObject=None):
+        super().__init__(parent)
+        self._ship_view = self.ShipView(parent)
 
-        # Add ship items
-        for i, attr in enumerate(port_items.Ship.ShipAttr):
-            
-            # Offset name attribute (should be above these attributes)
-            if i == 0:
-                super().__init__('', attr.type)
-                continue
-
-            # Offset doors attribute (doors are nested below attributes)
-            elif i == len(port_items.Ship.ShipAttr) - 1:
-                continue
-
-            # Attributes of the ship nested under the name
-            else:
-                rand_range = lambda x: random.randint(0, len(x) - 1)
-                if attr.type == Qt.GlobalColor:
-                    self.color = QColor(Qt.GlobalColor(rand_range(Qt.GlobalColor)))
-                    value_item = ColorButton(self.color)
-                elif attr.type == Qt.BrushStyle:
-                    self.pattern = pattern_arr[rand_range(pattern_arr)]
-                    value_item = PatternButton(self.pattern)
-                else:
-                    value_item = Label('', attr.type)
-            self.appendRow([StaticItem(attr.string), value_item])
-
-        # Add door spawning button
-        self._door_button = SpawnDoorButton()
-        self.appendRow([self._door_button, StaticItem()])
-
-    def add_door(self):
-        self.removeRow(self._door_button.row())
-
-        #TODO: Auto naming
-        door = Label('', list(port_items.Ship.Door.DoorAttr)[0])
-        self.appendRow([door, StaticItem()])
-
-        # Add door items
-        for i, attr in enumerate(list(port_items.Ship.Door.DoorAttr)):
-            if i == 0:
-                continue
-            key_item = StaticItem(attr.string)
-            if attr.type == port_items.Side:
-                value_item = SideButton()
-            else:
-                value_item = Label('', attr.type)
-            door.appendRow([key_item, value_item])
-        self._door_button = SpawnDoorButton()
-        self.appendRow(self._door_button)
-
-    def get_color(self):
-        return self.color
-
-    def set_color(self, color: QColor):
-        self.color = color
-
-    def get_pattern(self):
-        return self.pattern
-
-    def set_pattern(self, pattern: Qt.BrushStyle):
-        self.pattern = pattern
+    class ShipView(QTreeView):
+        def __init__(self, parent: QObject=None):
+            super().__init__(parent, wordWrap=True, expandsOnDoubleClick=True,
+                             uniformRowHeights=True)
+            self.setModel(ShipModel(self))
+            self.clicked.connect(self.model().item_press)
+            #TODO: Enforce equal column widths
 
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
         super().__init__(0, COLUMN_COUNT, parent)
         self.setHorizontalHeaderLabels([''] * COLUMN_COUNT) # Empty headers
-        self._read_ships()
-
-        self._ship_button = SpawnShipButton()
-        self.setItem(0, self._ship_button)
-        self.setItem(0, 1, StaticItem())
-
-        self.changeConnect = lambda: self.itemChanged.connect(self._check_all)
-        self.changeDisconnect = lambda: self.itemChanged.disconnect()
-        self.changeConnect()
-
-    def _read_ships(self):
-        for path in os.listdir(SHIP_DIR):
-            if os.path.splitext(path)[1] == ".json":
-                root = self.invisibleRootItem()
-                root.appendRow([ShipItem(path), StaticItem()])
-
-    # Load json data
-    def _read_ship(self, json_path):
-        if os.path.splitext(json_path)[1] != ".json":
-            raise ValueError("Argued file is not a .json type")
-        ship_dict = port_items.Ship(json_path)
-        ship_name = os.path.splitext(os.path.basename(ship_dict))[0]
-        ShipItem(ship_name)
-
-    def _write_ship(self, ship: port_items.Ship):
-        path = ship_path(ship._name)
-        if os.path.isfile(path):
-            #TODO: Handle duplicate file names
-            pass
-
-        if len(ship._doors) == 0:
-            #TODO: Handle door null set
-            pass
-
-        # Write file
-        with open(path, "w+") as json_file: self._json = json.load(json_file)   
-
-    def _add_ship(self, button: SpawnShipButton):
-        self.removeRow(button.row())
-        self.appendRow([ShipItem(), StaticItem('')])
-        self.appendRow([SpawnShipButton(), StaticItem('')])
+        self.change_connect = lambda: self.itemChanged.connect(lambda x: self.check_ships())
+        self.change_disconnect = lambda: self.itemChanged.disconnect()
+        self._add_ship_button_append()
+        self.change_connect()
 
     def item_press(self, index: QModelIndex):
         button = self.itemFromIndex(index)
-        if button.__class__ == SpawnShipButton:
-            self._add_ship(button)
-            self._check_all()
-        elif button.__class__ == SpawnDoorButton:
-            button.parent().add_door()
-            self._check_all()
-        elif button.__class__ == ColorButton:
-            color_dialog = QColorDialog()
-            color_dialog.exec()
-            color = color_dialog.selectedColor()
-            button.update_color(color)
+        if button.__class__ == AddShipButton:
+            self.add_ship()
+        elif button.__class__ == AddDoorButton:
+            ship: Ship
+            ship = button.parent()
+            ship.add_door()
         elif button.__class__ == PatternButton:
+            button: PatternButton
             pattern_dialog = PatternDialog()
             pattern_dialog.exec()
             pattern = pattern_dialog.return_pattern()
             button.update_pattern(pattern)
+        elif button.__class__ == ColorButton:
+            button: ColorButton
+            color_dialog = QColorDialog()
+            color_dialog.exec()
+            color = color_dialog.selectedColor()
+            button.update_color(color)
         elif button.__class__ == SideButton:
+            button: SideButton
             button.increment_side()
 
-    def _check_value(self, item: Label):
-        # Assess validity of the label entry
-        attr = self.itemFromIndex(self.indexFromItem(item).siblingAtColumn(1))
-        print(attr.__class__)
-        if attr.__class__ == Label and attr.item_type != None:
-            try:
-                if attr.text() == '':
-                    item.isValid = False # Show no warnings if given no input
-                else:
-                    item_value = call(attr.item_type, attr.text())
-                    if type(item_value) == attr.item_type:
-                        item.isValid = True
-                    else:
-                        item.isValid = False
-            except Exception as error:
-                item.isValid = False
-                WarningDialog(str(error)).exec()
-                attr.setText('')
+    def add_ship(self, name: str | None = None):
+        self.removeRow(self.add_ship_button.row())
+        if type(name == None):
+            Ship(self, f"Ship {self.rowCount() + 1}")
+        elif type(name == str):
+            Ship(self, name)
+        self._add_ship_button_append()
+        self.check_ships()
 
-            # Only color the entry values; special values always valid
-            if item.isValid:
+    def _add_ship_button_append(self):
+        self.add_ship_button = AddShipButton()
+        self.appendRow(self.add_ship_button)
+
+    @Slot()
+    def check_ships(self):
+        i = 0
+        while True:
+            item = self.item(i, 0)
+            if item == None or item.__class__ == AddShipButton:
+                break
+            else:
+                ship: Ship
+                ship = item
+                ship.check()
+            i += 1
+
+    def _check_value(self, item: QStandardItem):
+        if item.__class__ == AddShipButton:
+            pass 
+        #TODO: Ship and Door name checking
+        elif item.__class__ == Ship or item.__class__ == Ship.Door:
+           pass
+        else:
+            ship_item: Ship.ShipItem
+            self.change_disconnect()
+            ship_item = self.itemFromIndex(item.index().siblingAtColumn(0))
+            ship_item.check_valid()
+            self.change_connect()
+
+class Ship(QStandardItem):
+    class ShipItem(QStandardItem):
+        def __init__(self, parent: QStandardItem, name: str, json_name: str, typing):
+            super().__init__(name)
+            self.name = name
+            self.json_name = json_name
+            self.typing = typing
+            self.valid = False
+
+            # Add to model
+            if self.typing == Qt.BrushStyle:
+                entry = PatternButton()
+            elif self.typing == QColor:
+                entry = ColorButton()
+            elif self.typing == Side:
+                entry = SideButton()
+            else:
+                entry = QStandardItem()
+            parent.appendRow([self, entry])
+            self.setText(self.name)
+
+        def check_valid(self) -> bool:
+            try:
+                item = self.model().itemFromIndex(self.index().siblingAtColumn(1))
+                if(item.__class__ == ColorButton or
+                   item.__class__ == PatternButton or
+                   item.__class__ == SideButton):
+                    self.isValid = True
+                else:
+                    if item.text() == '':
+                        self.isValid = False
+                    else:
+                        item_value = call(self.typing, item.text())
+                        if type(item_value) == self.typing:
+                            self.isValid = True
+                        else:
+                            self.isValid = False
+            except Exception as error:
+                self.isValid = False
+                WarningDialog(str(error)).exec()
+            if self.isValid:
                 color = Qt.GlobalColor.green
             else:
                 color = Qt.GlobalColor.red
+                item.clearData()
+            self.setForeground(color)
 
-            self.changeDisconnect()
-            attr.setForeground(color)
-            item.setForeground(color)
-            self.changeConnect()
+    class Door(ShipItem):
+        def __init__(self, parent: QStandardItem, name: str):
+            super().__init__(parent, name, name, type(self))
+            parent.ShipItem(self, "Side", "side", Side)
+            parent.ShipItem(self, "Bow Distance", "bow_distance", float)
+            parent.ShipItem(self, "Stern Distance", "stern_distance", float)
+            parent.ShipItem(self, "Width", "width", float)
+            parent.ShipItem(self, "Height", "height", float)
 
-        # Do not color special values
-        else:
-            item.isValid = True
+    def __init__(self, parent: QStandardItemModel, name: str):
+        super().__init__(name)
+        parent.setItem(parent.rowCount(), 0, self)
+        self._init_vals()
 
-    @Slot()
-    def _check_all(self):
-        # row_exists = lambda r: 
+    def _init_vals(self):
+        self.ShipItem(self, "Length", "length", float)
+        self.ShipItem(self, "Pattern", "pattern", Qt.BrushStyle)
+        self.ShipItem(self, "Color", "color", QColor)
+        self.ShipItem(self, "Width", "width", float)
+        self._add_door_button_append()
+    
+    def _add_door_button_append(self):
+        self.add_door_button = AddDoorButton()
+        self.appendRow(self.add_door_button)
+    
+    def add_door(self, name: str | None = None):
+        self.removeRow(self.rowCount() - 1)
+        if type(name == None):
+            # Change 3 if more ship variables added
+            self.Door(self, f"Door {self.rowCount() - 3}") 
+        elif type(name == str):
+            self.Door(self, name)
+        self._add_door_button_append()
+        self.check()
+    
+    def check(self):
         i = 0
         while True:
-            if(self.checkIndex(self.indexFromItem(self.item(i)))
-               and type(self.item(i)) == ShipItem):
+            item = self.child(i, 0)
+            if item.__class__ == Ship.ShipItem:
+                item: Ship.ShipItem
+                item.check_valid()
+            elif item.__class__ == Ship.Door:
                 j = 0
                 while True:
-                    item = self.item(i).child(j)
-                    if item != None:
-                        self._check_value(item)
-                        j += 1
+                    door_item = item.child(j, 0)
+                    if door_item.__class__ == Ship.ShipItem:
+                        door_item: Ship.ShipItem
+                        door_item.check_valid()
                     else:
                         break
-                i += 1
+                    j += 1
             else:
-                print(end='\n')
                 break
+            i += 1
 
-# Debug
-x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
-print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
-x = port_items.Ship.from_dict(
-                    {"ship_name": "sdsd",
-                     "length": 1.0,
-                     "pattern": 1,
-                     "color": 1,
-                     "width": 1,
-                     "ththt": {
-                         "side": 1,
-                         "bow_distance": 1,
-                         "stern_distance": 1,
-                         "width": 1,
-                         "height": 1,
-                         "height_above_waterline": 1
-                     },
-                     "sds": {
-                         "side": 1,
-                         "bow_distance": 1,
-                         "stern_distance": 1,
-                         "width": 1,
-                         "height": 1,
-                         "height_above_waterline": 1
-                     }})
-print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
-print(x.to_dict())
-print(x.doors[0].to_dict())
-print(x.get_height())
-debug_message = "DEBUG END"
-print(debug_message.rjust(82 - len(debug_message)))
+# # Debug
+# x = port_items.Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
+# print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
+# x = port_items.Ship.from_dict(
+#                     {"ship_name": "sdsd",
+#                      "length": 1.0,
+#                      "pattern": 1,
+#                      "color": 1,
+#                      "width": 1,
+#                      "ththt": {
+#                          "side": 1,
+#                          "bow_distance": 1,
+#                          "stern_distance": 1,
+#                          "width": 1,
+#                          "height": 1,
+#                          "height_above_waterline": 1
+#                      },
+#                      "sds": {
+#                          "side": 1,
+#                          "bow_distance": 1,
+#                          "stern_distance": 1,
+#                          "width": 1,
+#                          "height": 1,
+#                          "height_above_waterline": 1
+#                      }})
+# print(f"{x.ship_name}, {x.length}, {x.pattern}, {x.color}, {x.width}")
+# print(x.to_dict())
+# print(x.doors[0].to_dict())
+# print(x.get_height())
+# debug_message = "DEBUG END"
+# print(debug_message.rjust(82 - len(debug_message)))
