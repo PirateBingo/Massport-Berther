@@ -359,6 +359,8 @@ class Ship(QStandardItem):
 
         def set_valid(self, b: bool):
             self.valid = b
+
+            # Change color to green if valid, red if invalid
             if self.is_valid():
                 self.setForeground(Qt.GlobalColor.green)
             else:
@@ -386,7 +388,7 @@ class Ship(QStandardItem):
     def add_door(self, name: str | None = None):
         self.removeRow(self.rowCount() - 1)
         if type(name == None):
-            # Change 3 if more ship variables added
+            #TODO: Make row count subtraction more elegant
             self.Door(self, f"Door {self.rowCount() - 3}") 
         elif type(name == str):
             self.Door(self, name)
@@ -397,7 +399,22 @@ class Ship(QStandardItem):
         return self.valid
 
     def set_valid(self, b: bool):
-        self.valid = b
+        # Check if ship has at least one door
+        i = 0
+        has_doors: bool
+        has_doors = False
+        while True:
+            child = self.child(i, 0)
+            if child == None:
+                break
+            elif type(child) == self.Door:
+                has_doors = True
+            i += 1
+
+        # Set invalid if ship has no doors, even if method argued true
+        self.valid = b and has_doors
+
+        # Change color to green if valid, red if invalid
         if self.is_valid():
             self.setForeground(Qt.GlobalColor.green)
         else:
