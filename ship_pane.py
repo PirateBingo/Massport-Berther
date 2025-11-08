@@ -93,7 +93,7 @@ class PatternDialog(QDialog):
         self.setLayout(QGridLayout())
         self.layout().addWidget(self.list, 0, 0, 1, 3)
         self.layout().addWidget(self.button, 1, 1, 1, 1)
-    
+
     @Slot()
     def item_selected(self):
         if len(self.list.selectedItems()) == 0:
@@ -131,10 +131,10 @@ class WarningDialog(QDialog):
 DISPLAY_ITEM_FLAGS = (~Qt.ItemFlag.ItemIsEditable | ~Qt.ItemFlag.ItemIsEditable)
 
 class Label(QStandardItem):
-    def __init__(self, item_text: str = None, item_type = None, isValid: bool = False):
+    def __init__(self, item_text: str = None, item_type = None, valid: bool = False):
         self.item_type = item_type
         self.item_text = item_text
-        self.isValid = isValid
+        self.valid = valid
         super().__init__(self.item_text)
 
 class StaticItem(Label):
@@ -161,7 +161,7 @@ class AddDoorButton(QStandardItem):
 
 class ColorButton(Label):
     def __init__(self, color: QColor | None = None):
-        super().__init__(item_type=QColor, isValid=True)
+        super().__init__(item_type=QColor, valid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         if color == None:
             self.update_color(QColor(Qt.GlobalColor(random.randint(0, len(Qt.GlobalColor) - 1))))
@@ -173,28 +173,28 @@ class ColorButton(Label):
 
 class PatternButton(Label):
     def __init__(self, pattern: Qt.BrushStyle | None = None):
-        super().__init__(item_type=Qt.BrushStyle, isValid=True)
+        super().__init__(item_type=Qt.BrushStyle, valid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         if pattern == None:
             self.update_pattern(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
         else:
             self.update_pattern(pattern)
-    
+
     def update_pattern(self, pattern: Qt.BrushStyle):
         self.setIcon(StyleIcon(Qt.BrushStyle(pattern)))
 
 class SideButton(Label):
     def __init__(self):
-        super().__init__(item_type=Side, isValid=True)
+        super().__init__(item_type=Side, valid=True)
         self.setFlags(DISPLAY_ITEM_FLAGS)
         self.i = 0
         self.side = Side.both
         self.update_side()
-    
+
     def update_side(self):
         icon = QIcon(SIDE_ICONS.get(self.side))
         self.setIcon(icon)
-    
+
     def increment_side(self):
         self.i = (self.i + 1) % len(Side)
         self.side = Side(self.i)
@@ -312,25 +312,26 @@ class Ship(QStandardItem):
                 if(item.__class__ == ColorButton or
                    item.__class__ == PatternButton or
                    item.__class__ == SideButton):
-                    self.isValid = True
+                    self.valid = True
                 else:
                     if item.text() == '':
-                        self.isValid = False
+                        self.valid = False
                     else:
                         item_value = call(self.typing, item.text())
                         if type(item_value) == self.typing:
-                            self.isValid = True
+                            self.valid = True
                         else:
-                            self.isValid = False
+                            self.valid = False
             except Exception as error:
-                self.isValid = False
+                self.valid = False
                 WarningDialog(str(error)).exec()
-            if self.isValid:
+            if self.valid:
                 color = Qt.GlobalColor.green
             else:
                 color = Qt.GlobalColor.red
                 item.clearData()
             self.setForeground(color)
+            return self.valid
 
     class Door(ShipItem):
         def __init__(self, parent: QStandardItem, name: str):
@@ -340,11 +341,23 @@ class Ship(QStandardItem):
             parent.ShipItem(self, "Stern Distance", "stern_distance", float)
             parent.ShipItem(self, "Width", "width", float)
             parent.ShipItem(self, "Height", "height", float)
+            self.valid = False
+
+        def is_valid(self) -> bool:
+            return self.valid
+
+        def set_valid(self, b: bool):
+            self.valid = b
+            if self.is_valid():
+                self.setForeground(Qt.GlobalColor.green)
+            else:
+                self.setForeground(Qt.GlobalColor.red)
 
     def __init__(self, parent: QStandardItemModel, name: str):
         super().__init__(name)
         parent.setItem(parent.rowCount(), 0, self)
         self._init_vals()
+        self.valid = False
 
     def _init_vals(self):
         self.ShipItem(self, "Length", "length", float)
@@ -352,11 +365,11 @@ class Ship(QStandardItem):
         self.ShipItem(self, "Color", "color", QColor)
         self.ShipItem(self, "Width", "width", float)
         self._add_door_button_append()
-    
+
     def _add_door_button_append(self):
         self.add_door_button = AddDoorButton()
         self.appendRow(self.add_door_button)
-    
+
     def add_door(self, name: str | None = None):
         self.removeRow(self.rowCount() - 1)
         if type(name == None):
@@ -366,28 +379,46 @@ class Ship(QStandardItem):
             self.Door(self, name)
         self._add_door_button_append()
         self.check()
-    
+
+    def is_valid(self) -> bool:
+        return self.valid
+
+    def set_valid(self, b: bool):
+        self.valid = b
+        if self.is_valid():
+            self.setForeground(Qt.GlobalColor.green)
+        else:
+            self.setForeground(Qt.GlobalColor.red)
+
     def check(self):
         self.model().change_disconnect()
+        ship_valid = True
         i = 0
         while True:
             item = self.child(i, 0)
             if item.__class__ == Ship.ShipItem:
                 item: Ship.ShipItem
-                item.check_valid()
+                if not item.check_valid():
+                    ship_valid = False
             elif item.__class__ == Ship.Door:
                 j = 0
+                item: Ship.Door
+                door_valid = True
                 while True:
                     door_item = item.child(j, 0)
                     if door_item.__class__ == Ship.ShipItem:
                         door_item: Ship.ShipItem
-                        door_item.check_valid()
+                        if not door_item.check_valid():
+                            door_valid = False
+                            ship_valid = False
                     else:
                         break
                     j += 1
+                item.set_valid(door_valid)
             else:
                 break
             i += 1
+        self.set_valid(ship_valid)
         self.model().change_connect()
 
 # # Debug
