@@ -3,6 +3,7 @@ import json
 import random
 import numpy as np
 import enum
+import typing
 from operator import call
 
 from PySide6.QtCore import *
@@ -257,7 +258,7 @@ class ShipModel(QStandardItemModel):
 
     def _add_ship_button_append(self):
         self.add_ship_button = AddShipButton()
-        self.appendRow(self.add_ship_button)
+        self.appendRow([self.add_ship_button, StaticItem()])
 
     @Slot()
     def check_ships(self):
@@ -289,12 +290,18 @@ class Ship(QStandardItem):
     class ShipItem(QStandardItem):
         def __init__(self, parent: QStandardItem, name: str, json_name: str, typing):
             super().__init__(name)
+            self.parent_item = parent
             self.name = name
             self.json_name = json_name
             self.typing = typing
             self.valid = False
 
-            # Add to model
+            # Set Name
+            self.setText(self.name)
+            self._add_item()
+
+        # Add item to ship; add special button instead of an entry if necessary
+        def _add_item(self):
             if self.typing == Qt.BrushStyle:
                 entry = PatternButton()
             elif self.typing == QColor:
@@ -303,8 +310,7 @@ class Ship(QStandardItem):
                 entry = SideButton()
             else:
                 entry = QStandardItem()
-            parent.appendRow([self, entry])
-            self.setText(self.name)
+            self.parent_item.appendRow([self, entry])
 
         def check_valid(self) -> bool:
             try:
@@ -343,6 +349,11 @@ class Ship(QStandardItem):
             parent.ShipItem(self, "Height", "height", float)
             self.valid = False
 
+        # Add door to ship, but make the entry element unchangeable
+        @typing.override
+        def _add_item(self):
+            self.parent_item.appendRow([self, StaticItem()])
+
         def is_valid(self) -> bool:
             return self.valid
 
@@ -355,7 +366,9 @@ class Ship(QStandardItem):
 
     def __init__(self, parent: QStandardItemModel, name: str):
         super().__init__(name)
-        parent.setItem(parent.rowCount(), 0, self)
+        row = parent.rowCount()
+        parent.setItem(row, 0, self)
+        parent.setItem(row, 1, StaticItem())
         self._init_vals()
         self.valid = False
 
@@ -368,7 +381,7 @@ class Ship(QStandardItem):
 
     def _add_door_button_append(self):
         self.add_door_button = AddDoorButton()
-        self.appendRow(self.add_door_button)
+        self.appendRow([self.add_door_button, StaticItem()])
 
     def add_door(self, name: str | None = None):
         self.removeRow(self.rowCount() - 1)
