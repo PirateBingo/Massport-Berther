@@ -153,46 +153,59 @@ class AddDoorButton(QStandardItem):
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
-class ColorButton(QStandardItem):
+class ValueButton(QStandardItem):
+    def __init__(self, typing):
+        super().__init__('')
+        self.setFlags(DISPLAY_ITEM_FLAGS)
+        self.typing = typing
+        self.value = None
+
+    def set_value(self, value):
+        self.value = call(self.typing, value)
+        self.setIcon(StyleIcon(self.value))
+
+class ColorButton(ValueButton):
     def __init__(self, color: QColor | None = None):
-        super().__init__()
-        self.setFlags(DISPLAY_ITEM_FLAGS)
+        super().__init__(QColor)
         if color == None:
-            self.update_color(QColor(Qt.GlobalColor(random.randint(0, len(Qt.GlobalColor) - 1))))
+            self.set_value(Qt.GlobalColor(random.randint(0, len(Qt.GlobalColor) - 1)))
         else:    
-            self.update_color(color)
+            self.set_value(color)
 
-    def update_color(self, color: QColor):
-        self.setIcon(StyleIcon(color))
-
-class PatternButton(QStandardItem):
+class PatternButton(ValueButton):
     def __init__(self, pattern: Qt.BrushStyle | None = None):
-        super().__init__()
-        self.setFlags(DISPLAY_ITEM_FLAGS)
+        super().__init__(Qt.BrushStyle)
         if pattern == None:
-            self.update_pattern(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
+            self.set_value(pattern_arr[random.randint(0, len(pattern_arr) - 1)])
         else:
-            self.update_pattern(pattern)
+            self.set_value(pattern)
 
-    def update_pattern(self, pattern: Qt.BrushStyle):
-        self.setIcon(StyleIcon(Qt.BrushStyle(pattern)))
-
-class SideButton(QStandardItem):
-    def __init__(self):
-        super().__init__()
-        self.setFlags(DISPLAY_ITEM_FLAGS)
+class SideButton(ValueButton):
+    def __init__(self, side: Side | None = None):
+        super().__init__(Side)
         self.i = 0
-        self.side = Side.both
-        self.update_side()
+        if side == None:
+            self.set_value(Side.both)
+        else:
+            self.set_value(Side(side))
+        self._update_side()
 
-    def update_side(self):
-        icon = QIcon(SIDE_ICONS.get(self.side))
+    @typing.override
+    def set_value(self, value):
+        if type(value) != self.typing:
+            raise TypeError(f"{self.__class__} takes {self.typing} type")
+        else:
+            self.setIcon(StyleIcon(SIDE_ICONS.get(value)))
+            self.value = value
+
+    def _update_side(self):
+        icon = QIcon(SIDE_ICONS.get(self.value))
         self.setIcon(icon)
 
     def increment_side(self):
         self.i = (self.i + 1) % len(Side)
-        self.side = Side(self.i)
-        self.update_side()
+        self.value = Side(self.i)
+        self._update_side()
 
 class ShipPane(QFrame):
     def __init__(self, parent: QObject=None):
@@ -205,15 +218,20 @@ class ShipPane(QFrame):
                              uniformRowHeights=True)
             self.setModel(ShipModel(self))
             self.clicked.connect(self.model().item_press)
+
+            # Debug
+            x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern, Qt.GlobalColor.blue, 5)
             #TODO: Enforce equal column widths
 
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
         super().__init__(0, COLUMN_COUNT, parent)
         self.setHorizontalHeaderLabels([''] * COLUMN_COUNT) # Empty headers
+        self._add_ship_button_append()
+
+        # Check the validity of the ship after it's been changed
         self.change_connect = lambda: self.itemChanged.connect(lambda x: self.check_ships())
         self.change_disconnect = lambda: self.itemChanged.disconnect()
-        self._add_ship_button_append()
         self.change_connect()
 
     def item_press(self, index: QModelIndex):
@@ -229,24 +247,22 @@ class ShipModel(QStandardItemModel):
             pattern_dialog = PatternDialog()
             pattern_dialog.exec()
             pattern = pattern_dialog.return_pattern()
-            button.update_pattern(pattern)
+            button.set_value(pattern)
         elif button.__class__ == ColorButton:
             button: ColorButton
             color_dialog = QColorDialog()
             color_dialog.exec()
             color = color_dialog.selectedColor()
-            button.update_color(color)
+            button.set_value(color)
         elif button.__class__ == SideButton:
             button: SideButton
             button.increment_side()
 
     def add_ship(self, name: str | None = None):
-        self.removeRow(self.add_ship_button.row())
         if type(name == None):
-            Ship(self, f"Ship {self.rowCount() + 1}")
+            Ship(self, f"Ship {self.rowCount() - 1}")
         elif type(name == str):
             Ship(self, name)
-        self._add_ship_button_append()
         self.check_ships()
 
     def _add_ship_button_append(self):
@@ -360,44 +376,70 @@ class Ship(QStandardItem):
                 self.setForeground(Qt.GlobalColor.red)
 
     def __init__(self, parent: QStandardItemModel, name: str, *args):
+        parent.removeRow(parent.add_ship_button.row())
         super().__init__(name)
         row = parent.rowCount()
         parent.setItem(row, 0, self)
         parent.setItem(row, 1, StaticItem())
         self._init_vals()
+        parent._add_ship_button_append()
+
         if len(args) == 0:
             self.valid = False
         else:
-            for arg in args:
-                self.child()
-
-    @classmethod
-    def from_json(self, s: dict | str):
-        if type(s) == str:
-            # if os.path.isfile(str) and 
-            # os.PathLike
-            # path = os.path.isfile(str)
-            pass
+            for i, arg in enumerate(args):
+                if i < self.ship_item_count():
+                    # Set text value if normal entry, else assumed to be ValueButton
+                    child = self.child(i, 1)
+                    #FIXME: Integrate error checking
+                    if self.child(i, 1).__class__ == QStandardItem:
+                        child: QStandardItem
+                        child.setText(str(arg))
+                    else:
+                        child: ValueButton
+                        child.set_value(arg)
+                else:
+                    #TODO: Implement
+                    if type(arg) == self.Door:
+                        pass
+                    elif type(arg) == dict:
+                        pass
+        self.check()
 
     def _init_vals(self):
         self.ShipItem(self, "Length", "length", float)
         self.ShipItem(self, "Pattern", "pattern", Qt.BrushStyle)
         self.ShipItem(self, "Color", "color", QColor)
         self.ShipItem(self, "Width", "width", float)
-        self._add_door_button_append()
+        self.add_door_button_append()
 
-    def _add_door_button_append(self):
+    #TODO: Implement
+    @classmethod
+    def from_json(self, s: dict | str):
+        pass
+
+    def add_door_button_append(self):
         self.add_door_button = AddDoorButton()
         self.appendRow([self.add_door_button, StaticItem()])
+
+    def ship_item_count(self) -> int:
+        count = 0
+        for i in range(self.rowCount()):
+            if type(self.child(i, 0)) != Ship.ShipItem:
+                return count
+            else:
+                count += 1
+        return count
 
     def add_door(self, name: str | None = None):
         self.removeRow(self.rowCount() - 1)
         if type(name == None):
-            #TODO: Make row count subtraction more elegant
-            self.Door(self, f"Door {self.rowCount() - 3}") 
+            # TODO: Add "autoname" bool, set to true until changed by user
+            # So if a door is removed, the other door's numbers will be adjusted
+            self.Door(self, f"Door {self.rowCount() - self.ship_item_count() + 1}")
         elif type(name == str):
             self.Door(self, name)
-        self._add_door_button_append()
+        self.add_door_button_append()
         self.check()
 
     def is_valid(self) -> bool:
@@ -455,6 +497,3 @@ class Ship(QStandardItem):
             i += 1
         self.set_valid(ship_valid)
         self.model().change_connect()
-
-# # Debug
-# x = Ship("Ship Test", 5, Qt.BrushStyle.Dense3Pattern, Qt.GlobalColor.gray, 5)
