@@ -193,10 +193,11 @@ class SideButton(ValueButton):
     @typing.override
     def set_value(self, value):
         if type(value) != self.typing:
-            raise TypeError(f"{self.__class__} takes {self.typing} type")
-        else:
-            self.setIcon(StyleIcon(SIDE_ICONS.get(value)))
-            self.value = value
+            try:
+                value = call(self.typing, value)
+            except Exception:
+                raise TypeError(f"{self.__class__} takes {self.typing} type")
+        self.value = value
 
     def _update_side(self):
         icon = QIcon(SIDE_ICONS.get(self.value))
@@ -220,7 +221,14 @@ class ShipPane(QFrame):
             self.clicked.connect(self.model().item_press)
 
             # Debug
-            x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern, Qt.GlobalColor.blue, 5)
+            x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern,
+                     Qt.GlobalColor.blue, 5,
+                     {"sds": {"side": 2,
+                              "bow_distance": 1,
+                              "stern_distance": 1,
+                              "width": 1,
+                              "height": 1,
+                              "height_above_waterline": 1}})
             #TODO: Enforce equal column widths
 
 class ShipModel(QStandardItemModel):
@@ -356,6 +364,7 @@ class Ship(QStandardItem):
             parent.ShipItem(self, "Stern Distance", "stern_distance", float)
             parent.ShipItem(self, "Width", "width", float)
             parent.ShipItem(self, "Height", "height", float)
+            parent.ShipItem(self, "Height Above Waterline", "height_above_waterline", float)
             self.valid = False
 
         # Add door to ship, but make the entry element unchangeable
@@ -399,11 +408,23 @@ class Ship(QStandardItem):
                         child: ValueButton
                         child.set_value(arg)
                 else:
-                    #TODO: Implement
-                    if type(arg) == self.Door:
-                        pass
-                    elif type(arg) == dict:
-                        pass
+                    if type(arg) == dict:
+                        arg: dict
+                        name = list(arg.keys())[0]
+                        door = self.Door(self, name)
+                        #FIXME: Integrate error checking
+                        for i, key in enumerate(arg[name]):
+                            child = door.child(i, 1)
+                            value = arg.get(name)[key]
+                            if child.__class__ == QStandardItem:
+                                child: QStandardItem
+                                child.setText(str(value))
+                            else:
+                                child: ValueButton
+                                child.set_value(value)
+                    else:
+                        raise TypeError(f"Door arguments must be type dict, not {type(arg)}")
+        self.add_door_button_append()
         self.check()
 
     def _init_vals(self):
@@ -411,16 +432,11 @@ class Ship(QStandardItem):
         self.ShipItem(self, "Pattern", "pattern", Qt.BrushStyle)
         self.ShipItem(self, "Color", "color", QColor)
         self.ShipItem(self, "Width", "width", float)
-        self.add_door_button_append()
 
     #TODO: Implement
     @classmethod
     def from_json(self, s: dict | str):
         pass
-
-    def add_door_button_append(self):
-        self.add_door_button = AddDoorButton()
-        self.appendRow([self.add_door_button, StaticItem()])
 
     def ship_item_count(self) -> int:
         count = 0
@@ -430,6 +446,10 @@ class Ship(QStandardItem):
             else:
                 count += 1
         return count
+
+    def add_door_button_append(self):
+        self.add_door_button = AddDoorButton()
+        self.appendRow([self.add_door_button, StaticItem()])
 
     def add_door(self, name: str | None = None):
         self.removeRow(self.rowCount() - 1)
