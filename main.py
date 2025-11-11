@@ -22,10 +22,15 @@ PALLETTE_MASSPORT.setColor(QPalette.ColorRole.Accent, QColor(0, 57 * 1.5, 168 * 
 PALLETTE_MASSPORT.setColor(QPalette.ColorRole.AlternateBase, QColor(0, 57, 168))
 PALLETTE_MASSPORT.setColor(QPalette.ColorRole.Light, QColor(0, 57 * 1.5, 168 * 1.5))
 
-class Window(QSplitter):
+class DockWidget(QDockWidget):
+    def __init__(self, widget: QWidget):
+        super().__init__()
+        self.setWidget(widget)
+        self.setWindowTitle(widget.objectName())
+
+class Window(QMainWindow):
     def __init__(self):
-        super().__init__(childrenCollapsible=False,
-                         orientation=Qt.Orientation.Vertical)
+        super().__init__()
 
         # Set icon and window title
         logo = QIcon(LOGO)
@@ -40,28 +45,13 @@ class Window(QSplitter):
         QIcon.setThemeName("Material Symbols Outlined")
 
         # Setup widgets
-        self._time_pane = time_pane.TimePane(self)
-        self._ship_pane = ship_pane.ShipPane(self)
-        self._graphics_pane = graphics_pane.GraphicsPane(self)
-        self.addWidget(self._ship_pane)
-        self.addWidget(self._time_pane)
-        self.addWidget(self._graphics_pane)
-
-        #FIXME: Probably inefficient
-        # Get rid of dangling splitters
-        def delete_splitter(splitter: QSplitterHandle):
-            splitter.moveSplitter(-self.screen().availableSize().height())
-            splitter.setDisabled(True)
-        splitter_arr = []
-        for widget in self.children():
-            if type(widget) is QSplitterHandle:
-                splitter_arr.append(widget)
-        delete_splitter(splitter_arr[1])
-        delete_splitter(splitter_arr[3])
-
-        # Initialize JSON model
-        # self._model = ship_pane.ShipModel()
-        # self._ship_pane._ship_view.setModel(self._model)
+        self.setCentralWidget(graphics_pane.ShipMap())
+        
+        # pane = ship_pane.ShipPane()
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea,
+                           DockWidget(ship_pane.ShipView()))
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,
+                           DockWidget(time_pane.TimePane()))
 
 if __name__ == "__main__":
     app = QApplication()

@@ -29,61 +29,46 @@ ZOOM_IN_SHORTCUT = QKeyCombination(Qt.KeyboardModifier.ControlModifier,
 ZOOM_OUT_SHORTCUT = QKeyCombination(Qt.KeyboardModifier.ControlModifier,
                                     Qt.Key.Key_Minus)
 
-class GraphicsPane(QFrame):
+class ShipMap(QGraphicsView):
     def __init__(self, parent: QObject=None):
         super().__init__(parent)
-        self._tab_view = self.TabView(parent)
-        self._ship_map = self.ShipMap(parent)
 
-    class TabView(QTabBar):
-        def __init__(self, parent: QObject=None):
-            super().__init__(parent)
-            self.addTab("Top")
-            self.addTab("Side")
+        # Scene Initialization
+        self._scene = QGraphicsScene(parent)
+        self.setScene(self._scene)
+        self._scene_rect = QRectF(0, 0, SCENE_WIDTH, SCENE_HEIGHT)
+        self.setSceneRect(self._scene_rect)
 
-        def event(self, arg__1):
-            return super().event(arg__1)
+        # Configurations
+        self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self._scene.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
-    class ShipMap(QGraphicsView):
-        def __init__(self, parent: QObject=None):
-            super().__init__(parent)
+        # Background
+        # self.port = Port(self, self._scene)
+        # PortItem(self, SVG_PATH, PORT_ID, 0, 400)
+        # PortItem(self, SVG_PATH, BACKGROUND_ID, 0, 0)
+        port_items.Port(self)
+        port_items.WaterTree(self, 5, 5)
+        port_items.Bollard(self, 5, 5)
+        # bollard = Bollard(self, self._scene, 50, 50, 15)
+        # ship = Ship(self, 500)
 
-            # Scene Initialization
-            self._scene = QGraphicsScene(parent)
-            self.setScene(self._scene)
-            self._scene_rect = QRectF(0, 0, SCENE_WIDTH, SCENE_HEIGHT)
-            self.setSceneRect(self._scene_rect)
+    #TODO: Create side shell plan view with integrated "auto scroll down" thing
+    # def resizeEvent(self, event):
+    #     self.verticalScrollBar().setValue(self.sceneRect().height())
+    #     return super().resizeEvent(event)
 
-            # Configurations
-            self.setCacheMode(QGraphicsView.CacheModeFlag.CacheBackground)
-            self.setRenderHint(QPainter.RenderHint.Antialiasing)
-            self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-            self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-            self._scene.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.keyCombination() == ZOOM_IN_SHORTCUT:
+            self.zoom_in()
+        if event.keyCombination() == ZOOM_OUT_SHORTCUT:
+            self.zoom_out()
+    
+    def zoom_in(self):
+        self.scale(2, 2)
 
-            # Background
-            # self.port = Port(self, self._scene)
-            # PortItem(self, SVG_PATH, PORT_ID, 0, 400)
-            # PortItem(self, SVG_PATH, BACKGROUND_ID, 0, 0)
-            port_items.Port(self)
-            port_items.WaterTree(self, 5, 5)
-            port_items.Bollard(self, 5, 5)
-            # bollard = Bollard(self, self._scene, 50, 50, 15)
-            # ship = Ship(self, 500)
-
-        #TODO: Create side shell plan view with integrated "auto scroll down" thing
-        # def resizeEvent(self, event):
-        #     self.verticalScrollBar().setValue(self.sceneRect().height())
-        #     return super().resizeEvent(event)
-
-        def keyPressEvent(self, event: QKeyEvent):
-            if event.keyCombination() == ZOOM_IN_SHORTCUT:
-                self.zoom_in()
-            if event.keyCombination() == ZOOM_OUT_SHORTCUT:
-                self.zoom_out()
-
-        def zoom_in(self):
-            self.scale(2, 2)
-
-        def zoom_out(self):
-            self.scale(1/2, 1/2)
+    def zoom_out(self):
+        self.scale(1/2, 1/2)
