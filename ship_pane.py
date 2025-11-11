@@ -208,28 +208,24 @@ class SideButton(ValueButton):
         self.value = Side(self.i)
         self._update_side()
 
-class ShipPane(QFrame):
-    def __init__(self, parent: QObject=None):
-        super().__init__(parent)
-        self._ship_view = self.ShipView(parent)
+class ShipView(QTreeView):
+    def __init__(self):
+        super().__init__(wordWrap=True, expandsOnDoubleClick=True,
+                         uniformRowHeights=True)
+        self.setModel(ShipModel(self))
+        self.setObjectName("Ship Editor")
+        self.clicked.connect(self.model().item_press)
 
-    class ShipView(QTreeView):
-        def __init__(self, parent: QObject=None):
-            super().__init__(parent, wordWrap=True, expandsOnDoubleClick=True,
-                             uniformRowHeights=True)
-            self.setModel(ShipModel(self))
-            self.clicked.connect(self.model().item_press)
-
-            # Debug
-            x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern,
-                     Qt.GlobalColor.blue, 5,
-                     {"sds": {"side": 2,
-                              "bow_distance": 1,
-                              "stern_distance": 1,
-                              "width": 1,
-                              "height": 1,
-                              "height_above_waterline": 1}})
-            #TODO: Enforce equal column widths
+        # Debug
+        # x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern,
+        #             Qt.GlobalColor.blue, 5,
+        #             {"sds": {"side": 2,
+        #                     "bow_distance": 1,
+        #                     "stern_distance": 1,
+        #                     "width": 1,
+        #                     "height": 1,
+        #                     "height_above_waterline": 1}})
+        #TODO: Enforce equal column widths
 
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
@@ -268,7 +264,7 @@ class ShipModel(QStandardItemModel):
 
     def add_ship(self, name: str | None = None):
         if type(name == None):
-            Ship(self, f"Ship {self.rowCount() - 1}")
+            Ship(self, f"Ship {self.rowCount()}")
         elif type(name == str):
             Ship(self, name)
         self.check_ships()

@@ -5,8 +5,10 @@ from superqt import *
 import graphics_pane
 
 class TimePane(QSplitter):
-    def __init__(self, parent: QObject=None):
-        super().__init__(parent, childrenCollapsible=False)
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("Ship Planner")
+        self.setOrientation(Qt.Orientation.Vertical)
         self.calender = self.Calender(self)
         self.timeline_view = self.TimelineView(self)
         self.spawn_timeline = lambda date = QDate: self.calender.add_date(date)
@@ -15,6 +17,9 @@ class TimePane(QSplitter):
         def __init__(self, parent: QObject=None):
             super().__init__(parent)
             self.date_dict = {}
+            size_policy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding,
+                                      QSizePolicy.Policy.Maximum)
+            self.setSizePolicy(size_policy)
             #FIXME: Determine minimum size of calender naturally
             # Row height = 24px, Header height = 22 px, 24 * 7 + 22 = 190px?
 
