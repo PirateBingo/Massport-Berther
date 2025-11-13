@@ -1,6 +1,5 @@
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
-from superqt import *
 
 import ship_map
 
@@ -106,18 +105,16 @@ class Scheduler(QWidget):
     class ShipSlot(QWidget):
         def __init__(self, parent: QObject=None):
             super().__init__(parent)
-            self.slider = QRangeSlider(self, orientation=Qt.Orientation.Horizontal)
             self.left_bound = QTimeEdit(self)
             self.right_bound = QTimeEdit(self)
             self.ship_select = self.ShipSelect(self)
             self.bollard_select = self.BollardSelect(self)
 
             layout = QGridLayout(self)
-            layout.addWidget(self.slider, 0, 0, 1, 2)
-            layout.addWidget(self.left_bound, 1, 0, 1, 1)
-            layout.addWidget(self.right_bound, 1, 1, 1, 1)
-            layout.addWidget(self.ship_select, 3, 0, 1, 1)
-            layout.addWidget(self.bollard_select, 3, 1, 1, 1)
+            layout.addWidget(self.left_bound, 0, 0, 1, 1)
+            layout.addWidget(self.right_bound, 0, 1, 1, 1)
+            layout.addWidget(self.ship_select, 2, 0, 1, 1)
+            layout.addWidget(self.bollard_select, 2, 1, 1, 1)
 
         class ShipSelect(QListView):
             def __init__(self, parent: QObject):
