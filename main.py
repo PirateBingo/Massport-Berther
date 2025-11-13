@@ -6,9 +6,9 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from superqt import *
 
-import ship_pane
-import graphics_pane
-import time_pane
+import ship_map
+import ship_editor
+import ship_planner
 
 PROGRAM_NAME = "Flynn Cruiseport Planner"
 
@@ -45,13 +45,13 @@ class Window(QMainWindow):
         QIcon.setThemeName("Material Symbols Outlined")
 
         # Setup widgets
-        self.setCentralWidget(graphics_pane.ShipMap())
+        self.setCentralWidget(ship_map.ShipMap())
         
-        # pane = ship_pane.ShipPane()
+        # pane = ship_editor.ShipPane()
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea,
-                           DockWidget(ship_pane.ShipView()))
+                           DockWidget(ship_editor.ShipView()))
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,
-                           DockWidget(time_pane.TimePane()))
+                           DockWidget(ship_planner.ShipPlanner()))
 
 if __name__ == "__main__":
     app = QApplication()
