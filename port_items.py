@@ -18,10 +18,10 @@ COLOR = 0xdfcfbf
 SCENE_WIDTH = 3500
 SCENE_HEIGHT = 1000
 
-PORT_ID = "port"
 BOLLARD_ID = "bollard"
 WATER_TREE_ID = "water_tree"
 OUTLINE_ID = "outline"
+OCEAN_ID = "ocean"
 
 get_svg = lambda s = str: os.path.join(os.getcwd(), "geometry", f"{s}.svg")
 
@@ -56,6 +56,6 @@ class Outline(PortItem):
     def __init__(self, graphics_view: QGraphicsView):
         super().__init__(graphics_view, get_svg(OUTLINE_ID), x=0, y=0)
 
-class Port(PortItem):
+class Ocean(PortItem):
     def __init__(self, graphics_view: QGraphicsView):
-        super().__init__(graphics_view, get_svg(PORT_ID), x=0, y=0)
+        super().__init__(graphics_view, get_svg(OCEAN_ID), x=0, y=0)

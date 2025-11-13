@@ -1,4 +1,3 @@
-import weakref
 import os
 
 from PySide6.QtCore import *
@@ -43,15 +42,8 @@ class ShipMap(QGraphicsView):
         self._scene.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
 
         # Background
-        # self.port = Port(self, self._scene)
-        # PortItem(self, SVG_PATH, PORT_ID, 0, 400)
-        # PortItem(self, SVG_PATH, BACKGROUND_ID, 0, 0)
         port_items.Outline(self)
-        # port_items.Port(self)
-        # port_items.WaterTree(self, 5, 5)
-        # port_items.Bollard(self, 5, 5)
-        # bollard = Bollard(self, self._scene, 50, 50, 15)
-        # ship = Ship(self, 500)
+        port_items.Ocean(self)
 
     #TODO: Create side shell plan view with integrated "auto scroll down" thing
     # def resizeEvent(self, event):

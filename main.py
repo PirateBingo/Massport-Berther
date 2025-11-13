@@ -47,7 +47,7 @@ class Window(QMainWindow):
         # Setup widgets
         self.setCentralWidget(ship_map.ShipMap())
         
-        # pane = ship_editor.ShipPane()
+        # pane = ship_editor.ShipPane() 
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea,
                            DockWidget(ship_editor.ShipView()))
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,
