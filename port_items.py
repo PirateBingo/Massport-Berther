@@ -11,18 +11,17 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 from PySide6.QtSvgWidgets import *
 
-# import graphics_pane
-
 PEN = Qt.PenStyle.SolidLine
 STYLE = Qt.BrushStyle.Dense2Pattern
 COLOR = 0xdfcfbf
 
-SCENE_WIDTH = 4050
-SCENE_HEIGHT = 1100
+SCENE_WIDTH = 3500
+SCENE_HEIGHT = 1000
 
 PORT_ID = "port"
 BOLLARD_ID = "bollard"
 WATER_TREE_ID = "water_tree"
+OUTLINE_ID = "outline"
 
 get_svg = lambda s = str: os.path.join(os.getcwd(), 
                                        "geometry",
@@ -52,17 +51,17 @@ class Bollard(PortItem):
         #FIXME:
         # self.connect(str(Bollard), graphics_view.TimePane.TimelineView.Timeline.BollardSelect.add_bollard)
 
-class Supply(PortItem):
-    def __init__(self, graphics_view: QGraphicsView,):
-        super().__init__(graphics_view, get_svg(PORT_ID), x=0, y=0)
+# class Supply(PortItem):
+#     def __init__(self, graphics_view: QGraphicsView,):
+#         super().__init__(graphics_view, get_svg(PORT_ID), x=0, y=0)
 
 class WaterTree(PortItem):
     def __init__(self, graphics_view: QGraphicsView, x: float, y: float):
         super().__init__(graphics_view, get_svg(WATER_TREE_ID), x=x, y=y)
 
-# class Obstruction(PortItem):
-#     def __init__(self, ship_map: GraphicsPane.ShipMap):
-#         super().__init__(ship_map, get_svg(PORT_ID), x=0, y=0)
+class Outline(PortItem):
+    def __init__(self, graphics_view: QGraphicsView):
+        super().__init__(graphics_view, get_svg(OUTLINE_ID), x=0, y=0)
 
 class Port(PortItem):
     def __init__(self, graphics_view: QGraphicsView,):

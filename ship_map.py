@@ -7,15 +7,13 @@ from PySide6.QtWidgets import *
 from PySide6.QtSvgWidgets import *
 
 import port_items
-import ship_pane
-import time_pane
 
 PEN = Qt.PenStyle.SolidLine
 STYLE = Qt.BrushStyle.Dense2Pattern
 COLOR = 0xdfcfbf
 
-SCENE_WIDTH = 4050
-SCENE_HEIGHT = 1100
+SCENE_WIDTH = 3500
+SCENE_HEIGHT = 1000
 
 PORT_ID = "port"
 BOLLARD_ID = "bollard"
@@ -50,9 +48,10 @@ class ShipMap(QGraphicsView):
         # self.port = Port(self, self._scene)
         # PortItem(self, SVG_PATH, PORT_ID, 0, 400)
         # PortItem(self, SVG_PATH, BACKGROUND_ID, 0, 0)
-        port_items.Port(self)
-        port_items.WaterTree(self, 5, 5)
-        port_items.Bollard(self, 5, 5)
+        port_items.Outline(self)
+        # port_items.Port(self)
+        # port_items.WaterTree(self, 5, 5)
+        # port_items.Bollard(self, 5, 5)
         # bollard = Bollard(self, self._scene, 50, 50, 15)
         # ship = Ship(self, 500)
 
