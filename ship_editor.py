@@ -213,7 +213,7 @@ class ShipView(QTreeView):
         super().__init__(wordWrap=True, expandsOnDoubleClick=True,
                          uniformRowHeights=True)
         self.setModel(ShipModel(self))
-        self.setObjectName("Ship Editor")
+        self.setObjectName("Editor")
         self.clicked.connect(self.model().item_press)
 
         # Debug
@@ -513,3 +513,7 @@ class Ship(QStandardItem):
             i += 1
         self.set_valid(ship_valid)
         self.model().change_connect()
+    
+    class ShipGraphic(port_items.PortItem):
+        def __init__(self):
+            super().__init__()

@@ -18,9 +18,7 @@ SCENE_HEIGHT = 1000
 PORT_ID = "port"
 BOLLARD_ID = "bollard"
 WATER_TREE_ID = "water_tree"
-get_svg = lambda s = str: os.path.join(os.getcwd(), 
-                                       "geometry",
-                                       f"{s}.svg")
+get_svg = lambda s = str: os.path.join(os.getcwd(), "geometry", f"{s}.svg")
 
 ZOOM_IN_SHORTCUT = QKeyCombination(Qt.KeyboardModifier.ControlModifier,
                                    Qt.Key.Key_Equal)

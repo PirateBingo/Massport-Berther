@@ -23,9 +23,7 @@ BOLLARD_ID = "bollard"
 WATER_TREE_ID = "water_tree"
 OUTLINE_ID = "outline"
 
-get_svg = lambda s = str: os.path.join(os.getcwd(), 
-                                       "geometry",
-                                       f"{s}.svg")
+get_svg = lambda s = str: os.path.join(os.getcwd(), "geometry", f"{s}.svg")
 
 #TODO: Fenders, Bollards, Water Trees
 class PortItem(QGraphicsSvgItem):
@@ -50,11 +48,6 @@ class Bollard(PortItem):
         super().__init__(graphics_view, get_svg(BOLLARD_ID), x=x, y=y)
         #FIXME:
         # self.connect(str(Bollard), graphics_view.TimePane.TimelineView.Timeline.BollardSelect.add_bollard)
-
-# class Supply(PortItem):
-#     def __init__(self, graphics_view: QGraphicsView,):
-#         super().__init__(graphics_view, get_svg(PORT_ID), x=0, y=0)
-
 class WaterTree(PortItem):
     def __init__(self, graphics_view: QGraphicsView, x: float, y: float):
         super().__init__(graphics_view, get_svg(WATER_TREE_ID), x=x, y=y)
@@ -64,5 +57,5 @@ class Outline(PortItem):
         super().__init__(graphics_view, get_svg(OUTLINE_ID), x=0, y=0)
 
 class Port(PortItem):
-    def __init__(self, graphics_view: QGraphicsView,):
+    def __init__(self, graphics_view: QGraphicsView):
         super().__init__(graphics_view, get_svg(PORT_ID), x=0, y=0)
