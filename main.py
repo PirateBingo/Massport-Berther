@@ -51,7 +51,9 @@ class Window(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea,
                            DockWidget(ship_editor.ShipView()))
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,
-                           DockWidget(ship_planner.ShipPlanner()))
+                           DockWidget(ship_planner.Timeline()))
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea,
+                           DockWidget(ship_planner.Scheduler()))
 
 if __name__ == "__main__":
     app = QApplication()
