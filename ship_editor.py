@@ -30,6 +30,11 @@ SIDE_ICONS = {Side.both: get_icon("sides_both"),
 SHIP_DIR = os.path.join(os.getcwd(), "ships")
 ship_path = lambda s = str: os.path.join(SHIP_DIR, s)
 
+LABEL_FLAGS = (Qt.ItemFlag.ItemIsEnabled)
+LABEL_SELECTABLE_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+ENTRY_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+SHIP_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemIsDropEnabled)
+
 # List of allowed patterns for ships
 pattern_arr = list(Qt.BrushStyle)
 pattern_arr.remove(Qt.BrushStyle.LinearGradientPattern)
@@ -83,11 +88,11 @@ class PatternDialog(QDialog):
         self.list.horizontalHeader().hide()
         for i in enumerate(pattern_arr):
             label = QTableWidgetItem(i[1].name)
-            label.setFlags(Qt.ItemFlag.ItemIsSelectable)
+            label.setFlags(LABEL_FLAGS)
             self.list.setItem(i[0], 0, label)
 
             item = QTableWidgetItem(StyleIcon(i[1]), '')
-            item.setFlags(~Qt.ItemFlag.ItemIsEditable)
+            item.setFlags(LABEL_SELECTABLE_FLAGS)
             self.list.setItem(i[0], 1, item)
         self.list.itemSelectionChanged.connect(self.item_selected)
 
@@ -129,34 +134,34 @@ class WarningDialog(QDialog):
         self.layout().addWidget(self.message, 1, 1, 1, 1)
         self.layout().addWidget(self.button, 2, 1, 1, 1)
 
-DISPLAY_ITEM_FLAGS = (~Qt.ItemFlag.ItemIsEditable | ~Qt.ItemFlag.ItemIsEditable)
-
-class StaticItem(QStandardItem):
+class Label(QStandardItem):
     def __init__(self, text: str = None):
         self.item_text = text if type(text) == str else ''
         super().__init__(self.item_text)
-        self.setEditable(False)
-        self.setSelectable(False)
-        self.setText(self.item_text)
+        self.setFlags(LABEL_FLAGS)
 
+class Entry(QStandardItem):
+    def __init__(self):
+        super().__init__('')
+        self.setFlags(ENTRY_FLAGS)
 class AddShipButton(QStandardItem):
     def __init__(self):
         super().__init__("Add ship")
-        self.setFlags(DISPLAY_ITEM_FLAGS)
+        self.setFlags(LABEL_SELECTABLE_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
 class AddDoorButton(QStandardItem):
     def __init__(self):
         super().__init__("Add door")
-        self.setFlags(DISPLAY_ITEM_FLAGS)
+        self.setFlags(LABEL_SELECTABLE_FLAGS)
         icon = QIcon(ADD_ICON)
         self.setIcon(icon)
 
 class ValueButton(QStandardItem):
     def __init__(self, typing):
         super().__init__('')
-        self.setFlags(DISPLAY_ITEM_FLAGS)
+        self.setFlags(LABEL_SELECTABLE_FLAGS)
         self.typing = typing
         self.value = None
 
@@ -216,6 +221,11 @@ class ShipView(QTreeView):
         self.setObjectName("Editor")
         self.clicked.connect(self.model().item_press)
 
+        self.setDragEnabled(True)
+        self.setAcceptDrops(False)
+        self.setDropIndicatorShown(True)
+        self.setDefaultDropAction(Qt.DropAction.ActionMask)
+
         # Debug
         # x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern,
         #             Qt.GlobalColor.blue, 5,
@@ -271,7 +281,7 @@ class ShipModel(QStandardItemModel):
 
     def _add_ship_button_append(self):
         self.add_ship_button = AddShipButton()
-        self.appendRow([self.add_ship_button, StaticItem()])
+        self.appendRow([self.add_ship_button, Label()])
 
     @Slot()
     def check_ships(self):
@@ -303,6 +313,7 @@ class Ship(QStandardItem):
     class ShipItem(QStandardItem):
         def __init__(self, parent: QStandardItem, name: str, json_name: str, typing):
             super().__init__(name)
+            self.setFlags(LABEL_FLAGS)
             self.parent_item = parent
             self.name = name
             self.json_name = json_name
@@ -316,14 +327,14 @@ class Ship(QStandardItem):
         # Add item to ship; add special button instead of an entry if necessary
         def _add_item(self):
             if self.typing == Qt.BrushStyle:
-                entry = PatternButton()
+                self.entry = PatternButton()
             elif self.typing == QColor:
-                entry = ColorButton()
+                self.entry = ColorButton()
             elif self.typing == Side:
-                entry = SideButton()
+                self.entry = SideButton()
             else:
-                entry = QStandardItem()
-            self.parent_item.appendRow([self, entry])
+                self.entry = Entry()
+            self.parent_item.appendRow([self, self.entry])
 
         def check_valid(self) -> bool:
             try:
@@ -348,7 +359,7 @@ class Ship(QStandardItem):
                 color = Qt.GlobalColor.green
             else:
                 color = Qt.GlobalColor.red
-                item.clearData()
+                item.setText('')
             self.setForeground(color)
             return self.valid
 
@@ -366,7 +377,7 @@ class Ship(QStandardItem):
         # Add door to ship, but make the entry element unchangeable
         @typing.override
         def _add_item(self):
-            self.parent_item.appendRow([self, StaticItem()])
+            self.parent_item.appendRow([self, Label()])
 
         def is_valid(self) -> bool:
             return self.valid
@@ -383,9 +394,11 @@ class Ship(QStandardItem):
     def __init__(self, parent: QStandardItemModel, name: str, *args):
         parent.removeRow(parent.add_ship_button.row())
         super().__init__(name)
+        self.setFlags(SHIP_FLAGS)
+
         row = parent.rowCount()
         parent.setItem(row, 0, self)
-        parent.setItem(row, 1, StaticItem())
+        parent.setItem(row, 1, Label())
         self._init_vals()
         parent._add_ship_button_append()
 
@@ -397,8 +410,8 @@ class Ship(QStandardItem):
                     # Set text value if normal entry, else assumed to be ValueButton
                     child = self.child(i, 1)
                     #FIXME: Integrate error checking
-                    if self.child(i, 1).__class__ == QStandardItem:
-                        child: QStandardItem
+                    if self.child(i, 1).__class__ == Entry:
+                        child: Entry
                         child.setText(str(arg))
                     else:
                         child: ValueButton
@@ -412,8 +425,8 @@ class Ship(QStandardItem):
                         for i, key in enumerate(arg[name]):
                             child = door.child(i, 1)
                             value = arg.get(name)[key]
-                            if child.__class__ == QStandardItem:
-                                child: QStandardItem
+                            if child.__class__ == Entry:
+                                child: Entry
                                 child.setText(str(value))
                             else:
                                 child: ValueButton
@@ -445,7 +458,7 @@ class Ship(QStandardItem):
 
     def add_door_button_append(self):
         self.add_door_button = AddDoorButton()
-        self.appendRow([self.add_door_button, StaticItem()])
+        self.appendRow([self.add_door_button, Label()])
 
     def add_door(self, name: str | None = None):
         self.removeRow(self.rowCount() - 1)
@@ -513,7 +526,8 @@ class Ship(QStandardItem):
             i += 1
         self.set_valid(ship_valid)
         self.model().change_connect()
-    
+
     class ShipGraphic(port_items.PortItem):
         def __init__(self):
             super().__init__()
+

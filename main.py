@@ -11,7 +11,6 @@ import ship_editor
 import ship_planner
 
 PROGRAM_NAME = "Flynn Cruiseport Planner"
-
 get_icon = lambda s: os.path.join(os.getcwd(), "icons", f"{s}.png")
 LOGO = get_icon("logo")
 
@@ -46,7 +45,7 @@ class Window(QMainWindow):
 
         # Setup widgets
         self.setCentralWidget(ship_map.ShipMap())
-        
+
         # pane = ship_editor.ShipPane() 
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea,
                            DockWidget(ship_editor.ShipView()))

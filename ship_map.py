@@ -45,6 +45,12 @@ class ShipMap(QGraphicsView):
         port_items.Outline(self)
         port_items.Ocean(self)
 
+    def dropEvent(self, event):
+        print("drop")
+    
+    def dragMoveEvent(self, event):
+        print(event)
+
     #TODO: Create side shell plan view with integrated "auto scroll down" thing
     # def resizeEvent(self, event):
     #     self.verticalScrollBar().setValue(self.sceneRect().height())
