@@ -224,7 +224,8 @@ class ShipView(QTreeView):
         self.setDragEnabled(True)
         self.setAcceptDrops(False)
         self.setDropIndicatorShown(True)
-        self.setDefaultDropAction(Qt.DropAction.ActionMask)
+        self.setSelectionBehavior(self.SelectionBehavior.SelectRows)
+        self.setSelectionMode(self.SelectionMode.SingleSelection)
 
         # Debug
         # x = Ship(self.model(), "Ship Test", 5, Qt.BrushStyle.Dense4Pattern,
@@ -526,7 +527,7 @@ class Ship(QStandardItem):
             i += 1
         self.set_valid(ship_valid)
         self.model().change_connect()
-
+    
     class ShipGraphic(port_items.PortItem):
         def __init__(self):
             super().__init__()
