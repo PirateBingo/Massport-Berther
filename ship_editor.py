@@ -33,7 +33,8 @@ ship_path = lambda s = str: os.path.join(SHIP_DIR, s)
 LABEL_FLAGS = (Qt.ItemFlag.ItemIsEnabled)
 LABEL_SELECTABLE_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
 ENTRY_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
-SHIP_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemIsDropEnabled)
+SHIP_INVALID_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
+SHIP_VALID_FLAGS = (Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDragEnabled | Qt.ItemFlag.ItemIsDropEnabled)
 
 # List of allowed patterns for ships
 pattern_arr = list(Qt.BrushStyle)
@@ -395,7 +396,7 @@ class Ship(QStandardItem):
     def __init__(self, parent: QStandardItemModel, name: str, *args):
         parent.removeRow(parent.add_ship_button.row())
         super().__init__(name)
-        self.setFlags(SHIP_FLAGS)
+        self.setFlags(SHIP_INVALID_FLAGS)
 
         row = parent.rowCount()
         parent.setItem(row, 0, self)
@@ -494,8 +495,10 @@ class Ship(QStandardItem):
         # Change color to green if valid, red if invalid
         if self.is_valid():
             self.setForeground(Qt.GlobalColor.green)
+            self.setFlags(SHIP_VALID_FLAGS)
         else:
             self.setForeground(Qt.GlobalColor.red)
+            self.setFlags(SHIP_INVALID_FLAGS)
 
     def check(self):
         self.model().change_disconnect()
