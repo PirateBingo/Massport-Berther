@@ -44,6 +44,22 @@ pattern_arr.remove(Qt.BrushStyle.ConicalGradientPattern)
 pattern_arr.remove(Qt.BrushStyle.TexturePattern)
 pattern_arr.remove(Qt.BrushStyle.NoBrush)
 
+SHIP_ATTR = {
+    "length": float,
+    "pattern": Qt.BrushStyle,
+    "color": QColor,
+    "width": float
+}
+
+DOOR_ATTR = {
+    "side": Side,
+    "bow_distance": float,
+    "stern_distance": float,
+    "width": float,
+    "height": float,
+    "height_above_waterline": float,
+}
+
 class StyleIcon(QIcon):
     class IconEngine(QIconEngine):
         def __init__(self, value: QColor | Qt.BrushStyle):
@@ -145,6 +161,7 @@ class Entry(QStandardItem):
     def __init__(self):
         super().__init__('')
         self.setFlags(ENTRY_FLAGS)
+
 class AddShipButton(QStandardItem):
     def __init__(self):
         super().__init__("Add ship")
@@ -368,12 +385,8 @@ class Ship(QStandardItem):
     class Door(ShipItem):
         def __init__(self, parent: QStandardItem, name: str):
             super().__init__(parent, name, type(self))
-            parent.ShipItem(self, "side", Side)
-            parent.ShipItem(self, "bow_distance", float)
-            parent.ShipItem(self, "stern_distance", float)
-            parent.ShipItem(self, "width", float)
-            parent.ShipItem(self, "height", float)
-            parent.ShipItem(self, "height_above_waterline", float)
+            for key in DOOR_ATTR.keys():
+                parent.ShipItem(self, key, DOOR_ATTR[key])
             self.valid = False
 
         # Add door to ship, but make the entry element unchangeable
@@ -401,7 +414,9 @@ class Ship(QStandardItem):
         row = parent.rowCount()
         parent.setItem(row, 0, self)
         parent.setItem(row, 1, Label())
-        self._init_vals()
+        for key in SHIP_ATTR.keys():
+            self.ShipItem(self, key, SHIP_ATTR[key])
+
         parent._add_ship_button_append()
 
         if len(args) == 0:
@@ -437,12 +452,6 @@ class Ship(QStandardItem):
                         raise TypeError(f"Door arguments must be type dict, not {type(arg)}")
         self.add_door_button_append()
         self.check()
-
-    def _init_vals(self):
-        self.ShipItem(self, "length", float)
-        self.ShipItem(self, "pattern", Qt.BrushStyle)
-        self.ShipItem(self, "color", QColor)
-        self.ShipItem(self, "width", float)
 
     #TODO: Implement
     @classmethod
