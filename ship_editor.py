@@ -57,7 +57,7 @@ DOOR_ATTR = {
     "stern_distance": float,
     "width": float,
     "height": float,
-    "height_above_waterline": float,
+    "height_above_waterline": float
 }
 
 class StyleIcon(QIcon):
@@ -162,6 +162,9 @@ class Entry(QStandardItem):
         super().__init__('')
         self.setFlags(ENTRY_FLAGS)
 
+    def set_value(self, value):
+        self.setText(str(value))
+
 class AddShipButton(QStandardItem):
     def __init__(self):
         super().__init__("Add ship")
@@ -221,6 +224,7 @@ class SideButton(ValueButton):
             except Exception:
                 raise TypeError(f"{self.__class__} takes {self.typing} type")
         self.value = value
+        self._update_side()
 
     def _update_side(self):
         icon = QIcon(SIDE_ICONS.get(self.value))
@@ -254,6 +258,7 @@ class ShipView(QTreeView):
         #                     "width": 1,
         #                     "height": 1,
         #                     "height_above_waterline": 1}})
+        # ship_from_json(self.model(), "Enchanted Princess")
         #TODO: Enforce equal column widths
 
 class ShipModel(QStandardItemModel):
@@ -453,11 +458,6 @@ class Ship(QStandardItem):
         self.add_door_button_append()
         self.check()
 
-    #TODO: Implement
-    @classmethod
-    def from_json(self, s: dict | str):
-        pass
-
     def ship_item_count(self) -> int:
         count = 0
         for i in range(self.rowCount()):
@@ -543,3 +543,24 @@ class Ship(QStandardItem):
     class ShipGraphic(port_items.PortItem):
         def __init__(self):
             super().__init__()
+
+def ship_from_json(model: QStandardItemModel, ship_name: str):
+    path = os.path.join(SHIP_DIR, f"{ship_name}.json")
+    if os.path.isfile(path):
+        with open(path) as file: s = file.read()
+        d = json.loads(s)
+        ship = Ship(model, ship_name)
+
+        # Process ship items
+        for i, key in enumerate(SHIP_ATTR):
+            val = call(SHIP_ATTR[key], d[list(d.keys())[i]])
+            ship.child(i, 1).set_value(val)
+
+        # # Process doors
+        for j in range(i+1, len(d)):
+            door_name = list(d.keys())[j]
+            ship.add_door(door_name)
+            for k, key in enumerate(DOOR_ATTR.keys()):
+                val = call(DOOR_ATTR[key], d[door_name][key])
+                ship.child(j).child(k, 1).set_value(val)
+            # ship.add_door({door_name : d[door_name]})
