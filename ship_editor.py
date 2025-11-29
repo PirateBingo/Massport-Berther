@@ -312,17 +312,17 @@ class ShipModel(QStandardItemModel):
 
 class Ship(QStandardItem):
     class ShipItem(QStandardItem):
-        def __init__(self, parent: QStandardItem, name: str, json_name: str, typing):
+        def __init__(self, parent: QStandardItem, name: str, typing):
             super().__init__(name)
             self.setFlags(LABEL_FLAGS)
             self.parent_item = parent
             self.name = name
-            self.json_name = json_name
+            self.text_name = name.replace('_', ' ').capitalize()
             self.typing = typing
             self.valid = False
 
             # Set Name
-            self.setText(self.name)
+            self.setText(self.text_name)
             self._add_item()
 
         # Add item to ship; add special button instead of an entry if necessary
@@ -366,13 +366,13 @@ class Ship(QStandardItem):
 
     class Door(ShipItem):
         def __init__(self, parent: QStandardItem, name: str):
-            super().__init__(parent, name, name, type(self))
-            parent.ShipItem(self, "Side", "side", Side)
-            parent.ShipItem(self, "Bow Distance", "bow_distance", float)
-            parent.ShipItem(self, "Stern Distance", "stern_distance", float)
-            parent.ShipItem(self, "Width", "width", float)
-            parent.ShipItem(self, "Height", "height", float)
-            parent.ShipItem(self, "Height Above Waterline", "height_above_waterline", float)
+            super().__init__(parent, name, type(self))
+            parent.ShipItem(self, "side", Side)
+            parent.ShipItem(self, "bow_distance", float)
+            parent.ShipItem(self, "stern_distance", float)
+            parent.ShipItem(self, "width", float)
+            parent.ShipItem(self, "height", float)
+            parent.ShipItem(self, "height_above_waterline", float)
             self.valid = False
 
         # Add door to ship, but make the entry element unchangeable
@@ -438,10 +438,10 @@ class Ship(QStandardItem):
         self.check()
 
     def _init_vals(self):
-        self.ShipItem(self, "Length", "length", float)
-        self.ShipItem(self, "Pattern", "pattern", Qt.BrushStyle)
-        self.ShipItem(self, "Color", "color", QColor)
-        self.ShipItem(self, "Width", "width", float)
+        self.ShipItem(self, "length", float)
+        self.ShipItem(self, "pattern", Qt.BrushStyle)
+        self.ShipItem(self, "color", QColor)
+        self.ShipItem(self, "width", float)
 
     #TODO: Implement
     @classmethod
@@ -531,4 +531,3 @@ class Ship(QStandardItem):
     class ShipGraphic(port_items.PortItem):
         def __init__(self):
             super().__init__()
-
