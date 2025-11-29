@@ -1,0 +1,14 @@
+{
+    "length": 4.0,
+    "pattern": 3,
+    "color": 4,
+    "width": 1.0,
+    "door": {
+        "side": 0,
+        "bow_distance": 2,
+        "stern_distance": 4,
+        "width":4, 
+        "height":4,
+        "height_above_waterline":4
+    }
+}
