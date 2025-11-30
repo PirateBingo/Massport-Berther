@@ -541,8 +541,9 @@ class Ship(QStandardItem):
         self.model().change_connect()
     
     class ShipGraphic(port_items.PortItem):
-        def __init__(self):
-            super().__init__()
+        def __init__(self, parent: QStandardItem):
+            parent.child()
+            super().__init__(parent)
 
 def ship_from_json(model: QStandardItemModel, ship_name: str):
     path = os.path.join(SHIP_DIR, f"{ship_name}.json")
