@@ -4,7 +4,6 @@ import os
 from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
-from superqt import *
 
 import ship_map
 import ship_editor
