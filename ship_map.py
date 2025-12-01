@@ -36,14 +36,18 @@ class ShipMap(QGraphicsView):
 
     def dragEnterEvent(self, event):
         event.acceptProposedAction()
-        index = event.source().selectedIndexes()[0]
-        self.ship = event.source().model().itemFromIndex(index)
-
-    def dragMoveEvent(self, event):
-        event.acceptProposedAction()
+        if event.source().is_first_drag:
+            event.source().ship.draw_ship_graphic(self, QPointF(0, 0))
+            event.source().is_first_drag = False
 
     def dropEvent(self, event):
         event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        event.acceptProposedAction()
+        pos = QPointF(event.posF().x() - self.viewportTransform().dx(),
+                      event.posF().y() - self.viewportTransform().dy()) 
+        event.source().ship.move_ship_graphic(pos)
 
     #TODO: Create side shell plan view with integrated "auto scroll down" thing
     # def resizeEvent(self, event):

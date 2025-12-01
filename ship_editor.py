@@ -60,6 +60,8 @@ DOOR_ATTR = {
     "height_above_waterline": float
 }
 
+get_index = lambda d = dict, s = str: list(d.keys()).index(s)
+
 class StyleIcon(QIcon):
     class IconEngine(QIconEngine):
         def __init__(self, value: QColor | Qt.BrushStyle):
@@ -260,6 +262,12 @@ class ShipView(QTreeView):
         #                     "height_above_waterline": 1}})
         # ship_from_json(self.model(), "Enchanted Princess")
         #TODO: Enforce equal column widths
+
+    # Variables ship and is_first_drag will exist during a drag operation
+    def startDrag(self, supportedActions):
+        self.ship = self.model().itemFromIndex(self.selectedIndexes()[0])
+        self.is_first_drag = True
+        return super().startDrag(supportedActions)
 
 class ShipModel(QStandardItemModel):
     def __init__(self, parent: QObject = None):
@@ -539,11 +547,22 @@ class Ship(QStandardItem):
             i += 1
         self.set_valid(ship_valid)
         self.model().change_connect()
-    
-    class ShipGraphic(port_items.PortItem):
-        def __init__(self, parent: QStandardItem):
-            parent.child()
-            super().__init__(parent)
+
+    class ShipGraphic(QGraphicsPathItem):
+        def __init__(self, ship: QStandardItem, pos: QPointF):
+            path = QPainterPath()
+            path.addRect(pos.x(), pos.y(), 5, 5)
+            super().__init__(path)
+
+    def draw_ship_graphic(self, parent: QGraphicsView, pos: QPointF):
+        self.ship_graphic = self.ShipGraphic(self, pos)
+        parent.scene().addItem(self.ship_graphic)
+        self.ship_graphic.show()
+        # width = self.child(get_index(SHIP_ATTR, "width"))
+        # height = self.child(get_index(SHIP_ATTR, "height"))
+
+    def move_ship_graphic(self, pos: QPointF):
+        self.ship_graphic.setPos(pos)
 
 def ship_from_json(model: QStandardItemModel, ship_name: str):
     path = os.path.join(SHIP_DIR, f"{ship_name}.json")
