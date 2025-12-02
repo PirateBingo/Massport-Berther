@@ -16,7 +16,7 @@ The timeline explores the range in which the ship occupies the port
 
 Underneath the timeline is the scheduler. It's in the right pane normally, but like all widgets, it can be moved around and even displayed as its own window.
 
-The scheduler selects the bollars for the cruise ships to berth to.
+The scheduler selects the bollards for the cruise ships to berth to.
 
 Taking an AI course my final semester of college, I learned about Constraint Satisfaction Problems. I now know that this AI problem is the ideal approach to finding the optimal ship schedule autonomously. A solution like this could easily be implemented with SciPy libraries in python.
 
