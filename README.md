@@ -1,4 +1,4 @@
-During my time at MassPort, I became interested in the process of berthing cruise ships, and learned that it took a lot of time for the people at Massport to work out. From what I've learned, I'm confident that the process is simple enough to be automated. I wrote a simple program to 
+During my time at MassPort, I became interested in the process of berthing cruise ships, and learned that it took a lot of time for the people to work out. From what I've learned, The process is simple enough to be automated by an AI. I'm working on a simple program to do this.
 
 The left pane of my program is for editing the properties of ships according to their Side Shell Plan.
 
