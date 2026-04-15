@@ -70,13 +70,12 @@ namespace Ship{
 	class Delegate: public QStyledItemDelegate{
 		public:
 		Delegate(): QStyledItemDelegate(){};
-	
+
 		// Create new widget of type
 		QWidget* createEditor(QWidget* parent,
 		[[maybe_unused]] const QStyleOptionViewItem& option,
 		[[maybe_unused]] const QModelIndex& index) const override{
 			WidgetType* widget = new WidgetType(parent);
-			init_widget(widget);
 			return widget;
 		};
 
@@ -124,11 +123,12 @@ namespace Ship{
 		void set_icon(const QIcon& icon){ right->setIcon(icon); };
 		QIcon get_icon(){ return right->icon(); };
 
+		QStandardItem* right;
+
 		private:
 		bool valid;
 		T value;
 		QStandardItem* left;
-		QStandardItem* right;
 	};
 
 	// SIMPLE ITEM DEFINITION
@@ -219,9 +219,10 @@ namespace Ship{
 		Item<PatternItemWidget, PatternItemType>(view, ship, name){
 			// FIXME Fix immediately
 			// Initialize widget in constructor
-			// QStyleOptionViewItem style_option = static_cast<QStyleOptionViewItem>(QStyleOptionComboBox());
-			// style_option.decorationAlignment(QFlags<Qt::AlignmentFlag>(Qt::AlignCenter));
-			// createEditor(view->viewport(), style_option, ship->index());
+			//style_option.decorationAlignment(QFlags<Qt::AlignmentFlag>(Qt::AlignCenter));
+			QStandardItemModel* model = static_cast<QStandardItemModel*>(view->model());
+			QWidget* editor = this->createEditor(view->viewport(), QStyleOptionViewItem(), ship->index());
+			view->setIndexWidget(model->indexFromItem(this->right), editor);
 
 			// This item will always be true
 			this->check();
